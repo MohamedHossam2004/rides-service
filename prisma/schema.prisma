@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Area {
+  id         Int      @id @default(autoincrement())
+  name       String   @unique
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now())
+
+  meeting_points MeetingPoint[]
+  rides          Ride[]
+
+  @@index([is_active])
+}
+
+model MeetingPoint {
+  id        Int     @id @default(autoincrement())
+  name      String
+  longitude Float
+  latitude  Float
+  area_id   Int
+  area      Area    @relation(fields: [area_id], references: [id])
+  is_active Boolean @default(true)
+
+  ride_meeting_points RideMeetingPoint[]
+
+  @@index([area_id])
+  @@index([is_active])
+}
+
+model Ride {
+  id              Int      @id @default(autoincrement())
+  area_id         Int
+  area            Area     @relation(fields: [area_id], references: [id])
+  to_giu          Boolean
+  pending         Boolean  @default(true)
+  driver_id       Int
+  girls_only      Boolean  @default(false)
+  departure_time  DateTime
+  seats_available Int
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+
+  ride_meeting_points RideMeetingPoint[]
+  reviews             RideReview[]
+
+  @@index([area_id])
+  @@index([driver_id])
+  @@index([pending])
+  @@index([departure_time])
+}
+
+model RideMeetingPoint {
+  id               Int          @id @default(autoincrement())
+  ride_id          Int
+  ride             Ride         @relation(fields: [ride_id], references: [id], onDelete: Cascade)
+  meeting_point_id Int
+  meeting_point    MeetingPoint @relation(fields: [meeting_point_id], references: [id])
+  price            Int
+  order_index      Int
+
+  @@unique([ride_id, meeting_point_id])
+  @@index([ride_id])
+  @@index([meeting_point_id])
+}
+
+model RideReview {
+  id         Int      @id @default(autoincrement())
+  ride_id    Int
+  ride       Ride     @relation(fields: [ride_id], references: [id])
+  driver_id  Int
+  rating     Int
+  review     String?
+  created_at DateTime @default(now())
+
+  @@unique([ride_id, driver_id])
+  @@index([ride_id])
+  @@index([driver_id])
+}
