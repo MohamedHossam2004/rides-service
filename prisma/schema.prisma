@@ -35,25 +35,32 @@ model MeetingPoint {
 }
 
 model Ride {
-  id              Int      @id @default(autoincrement())
+  id              Int        @id @default(autoincrement())
   area_id         Int
-  area            Area     @relation(fields: [area_id], references: [id])
+  area            Area       @relation(fields: [area_id], references: [id])
   to_giu          Boolean
-  pending         Boolean  @default(true)
+  status          RideStatus @default(PENDING)
   driver_id       Int
-  girls_only      Boolean  @default(false)
+  girls_only      Boolean    @default(false)
   departure_time  DateTime
   seats_available Int
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
 
   ride_meeting_points RideMeetingPoint[]
   reviews             RideReview[]
 
   @@index([area_id])
   @@index([driver_id])
-  @@index([pending])
+  @@index([status])
   @@index([departure_time])
+}
+
+enum RideStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
 }
 
 model RideMeetingPoint {
