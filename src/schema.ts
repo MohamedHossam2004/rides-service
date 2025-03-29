@@ -61,4 +61,51 @@ export const typeDefs = gql`
     total: Int!
     hasMore: Boolean!
   }
+
+
+  type Query {
+    getRides: [Ride!]!
+  }
+
+  type Mutation {
+    createRide(
+    areaId: Int!
+    departureTime: String!
+    driverId: Int!
+    girlsOnly: Boolean!
+    toGIU: Boolean!
+    pricing: [PricingInput!]!
+  ): Ride!
+}
+
+input PricingInput {
+  meetingPointId: Int!
+  price: Int!
+}
+
+# i just did this to insert the data in db 
+
+type Mutation {
+  createAreaWithMeetingPoints(input: CreateAreaInput!): Area!
+}
+
+input CreateAreaInput {
+  name: String!
+  isActive: Boolean!
+  meetingPoints: [MeetingPointInput!]!
+}
+
+input MeetingPointInput {
+  name: String!
+  longitude: Float!
+  latitude: Float!
+  isActive: Boolean!
+}
+#update
+type Mutation {
+  addSeat(rideId: Int!): Ride
+  removeSeat(rideId: Int!): Ride
+}
+
+
 `;
