@@ -5,6 +5,7 @@ import { resolvers } from "./resolvers";
 import { PrismaClient } from "@prisma/client";
 
 async function startServer() {
+  
   // Initialize Prisma client
   const prisma = new PrismaClient();
 
@@ -19,10 +20,8 @@ async function startServer() {
     listen: { port: 4000 },
     context: async () => ({ prisma }),
   });
-
   console.log(`🚀 Server ready at ${url}`);
 }
-
 startServer().catch((error) => {
   console.error("Error starting server:", error);
 });
