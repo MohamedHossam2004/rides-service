@@ -31,6 +31,7 @@ export const resolvers = {
 
         // Validate Meeting Points
 
+<<<<<<< HEAD
         const meetingPointIds = area.meeting_points.map((mp) => mp.id);
         const invalidMeetingPoints = pricing.filter(
           (p) => !meetingPointIds.includes(p.meetingPointId),
@@ -45,6 +46,20 @@ export const resolvers = {
         // Create Ride
         const newRide = await prisma.ride.create({
           data: {
+=======
+          // Validate Meeting Points
+
+          const meetingPointIds = area.meeting_points.map(mp => mp.id);
+          const invalidMeetingPoints = pricing.filter(p => !meetingPointIds.includes(p.meetingPointId));
+
+          if (invalidMeetingPoints.length > 0) {
+             throw new Error("One or more meeting points are invalid for this area");
+          }
+
+          // Create Ride
+          const newRide = await prisma.ride.create({
+           data: {
+>>>>>>> 319c618774606861a2d48a142308067be28e0992
             area_id: areaId,
             to_giu: toGIU,
             departure_time: new Date(departureTime),
