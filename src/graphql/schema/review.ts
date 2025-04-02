@@ -5,26 +5,38 @@ export const reviewTypeDefs = gql`
     id: ID!
     ride: Ride!
     driverId: ID!
+    riderId: ID!
     rating: Int!
     review: String
     createdAt: String!
   }
 
+  type DriverRating {
+    averageRating: Float!
+    reviewCount: Int!
+  }
+
   extend type Query {
     getRideReviews(rideId: ID!): [RideReview!]!
     getDriverReviews(driverId: ID!): [RideReview!]!
+    getRiderReviews(riderId: ID!): [RideReview!]!
+    getDriverAverageRating(driverId: ID!): DriverRating!
   }
 
   extend type Mutation {
     createRideReview(
       rideId: ID!
-      driverId: ID!
+      riderId: ID!
       rating: Int!
       review: String
     ): RideReview!
+    updateRideReview(
+      id: ID!
+      riderId: ID!
+      rating: Int
+      review: String
+    ): RideReview!
 
-    updateRideReview(id: ID!, rating: Int, review: String): RideReview!
-
-    deleteRideReview(id: ID!): Boolean!
+    deleteRideReview(id: ID!, riderId: ID!): Boolean!
   }
 `;

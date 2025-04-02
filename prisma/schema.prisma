@@ -82,11 +82,13 @@ model RideReview {
   ride_id    Int
   ride       Ride     @relation(fields: [ride_id], references: [id])
   driver_id  Int
+  rider_id   Int
   rating     Int
   review     String?
   created_at DateTime @default(now())
 
-  @@unique([ride_id, driver_id])
+  @@unique([ride_id, rider_id])
   @@index([ride_id])
   @@index([driver_id])
+  @@index([rider_id])
 }
