@@ -13,11 +13,11 @@ export const areaTypeDefs = gql`
     getArea(id: ID!): Area
   }
 
-  extend type Mutation {
-    createAreaWithMeetingPoints(input: CreateAreaInput!): Area!
-    updateArea(id: ID!, name: String, isActive: Boolean): Area!
-    deleteArea(id: ID!): Boolean!
-  }
+ extend type Mutation {
+  createAreaWithMeetingPoints(input: CreateAreaInput!): Area!
+  updateArea(id: ID!, name: String, isActive: Boolean): Area!  # Correct mutation definition
+  deleteArea(id: ID!): Boolean!
+}
 
   input CreateAreaInput {
     name: String!
