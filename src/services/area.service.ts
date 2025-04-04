@@ -97,9 +97,6 @@ export class AreaService {
   
   async updateArea(updateAreaId: string, { name, isActive }) {
     try {
-      console.log("menna is so tired " + updateAreaId);
-  
-      console.log("menna is so tired "+ updateAreaId);
       // Ensure data exists
       if ((name === undefined && isActive === undefined)) {
         throw new Error("No valid fields to update");
@@ -152,7 +149,7 @@ export class AreaService {
     }
   }
   
-  // 🆕 Delete Area with Validation
+  // Delete Area with Validation
   async deleteArea(id: string) {
     try {
       // Validate ID format
@@ -178,7 +175,7 @@ export class AreaService {
       // Delete the area
       await this.prisma.area.delete({ where: { id: Number(id) } });
 
-      return true; // Successfully deleted
+      return true; 
     } catch (error) {
       console.error("Error deleting area:", error);
       throw new Error(error instanceof Error ? error.message : "Failed to delete area");

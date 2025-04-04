@@ -15,7 +15,7 @@ export const areaTypeDefs = gql`
 
  extend type Mutation {
   createAreaWithMeetingPoints(input: CreateAreaInput!): Area!
-  updateArea(id: ID!, name: String, isActive: Boolean): Area!  # Correct mutation definition
+  updateArea(id: ID!, name: String, isActive: Boolean): Area!
   deleteArea(id: ID!): Boolean!
 }
 
