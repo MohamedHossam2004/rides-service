@@ -1,4 +1,5 @@
 import { ReviewService } from "../../services/review.service";
+import { RideService } from "../../services/ride.service";
 
 export const reviewResolvers = {
   Query: {
@@ -20,6 +21,21 @@ export const reviewResolvers = {
     getDriverAverageRating: async (_, { driverId }, { prisma }) => {
       const reviewService = new ReviewService(prisma);
       return reviewService.getDriverAverageRating(driverId);
+    },
+    searchRides: async (_, args, { prisma }) => {
+      try {
+        const rideService = new RideService(prisma);
+        const result = await rideService.searchRides(args);
+        return result ?? []; // fallback
+      } catch (error) {
+        console.error("searchRides resolver error:", error);
+        return [];
+      }
+    },
+
+    viewActiveRide: async (_, { userId }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getActiveRideForUser(Number(userId));
     },
   },
 
