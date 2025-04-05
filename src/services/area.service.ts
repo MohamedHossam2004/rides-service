@@ -156,26 +156,52 @@ export class AreaService {
       if (!id || typeof id !== "string") {
         throw new Error("Invalid area ID");
       }
-
-      // Check if area exists
-      const area = await this.prisma.area.findUnique({
-        where: { id: Number(id) },
-        include: { meeting_points: true },
-      });
-
-      if (!area) {
-        throw new Error("Area not found");
+      const areaId = Number(id);
+      if (isNaN(areaId)) {
+      throw new Error("Area ID must be a numeric string");
       }
 
-      // Delete all related meeting points first
-      await this.prisma.meetingPoint.deleteMany({
-        where: { area_id: Number(id) },
+     // Verify area exists
+    const area = await this.prisma.area.findUnique({
+      where: { id: areaId }
+    });
+
+    if (!area) {
+      throw new Error(`Area with ID ${id} not found`);
+    }
+
+  // Delete in proper sequence using transaction
+ return await this.prisma.$transaction(async (prisma) => {
+
+  await prisma.rideMeetingPoint.deleteMany({
+    where: {
+      meeting_point: {
+        area_id: areaId
+      }
+    }
+  });
+
+      await prisma.ride.deleteMany({
+        where: {
+          area_id: areaId
+        }
       });
 
-      // Delete the area
-      await this.prisma.area.delete({ where: { id: Number(id) } });
+     
+      await prisma.meetingPoint.deleteMany({
+        where: {
+          area_id: areaId
+        }
+      });
 
-      return true; 
+
+      await prisma.area.delete({
+        where: { id: areaId }
+      });
+
+      return true;
+    });
+
     } catch (error) {
       console.error("Error deleting area:", error);
       throw new Error(error instanceof Error ? error.message : "Failed to delete area");
