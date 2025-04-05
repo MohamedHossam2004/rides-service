@@ -17,7 +17,9 @@ export class AreaService {
         latitude: mp.latitude,
         isActive: mp.is_active,
       })),
-      createdAt: area.created_at ? area.created_at.toISOString() : new Date().toISOString(),
+      createdAt: area.created_at
+        ? area.created_at.toISOString()
+        : new Date().toISOString(),
     };
   }
 
@@ -30,20 +32,20 @@ export class AreaService {
   }
 
   async getArea(id: string) {
-  if (!id || typeof id !== "string") {
-    throw new Error("Invalid area ID");
-  }
+    if (!id || typeof id !== "string") {
+      throw new Error("Invalid area ID");
+    }
 
-  const area = await this.prisma.area.findUnique({
-    where: { id: Number(id) },
-    include: { meeting_points: true },
-  });
+    const area = await this.prisma.area.findUnique({
+      where: { id: Number(id) },
+      include: { meeting_points: true },
+    });
 
-  if (!area) {
-    throw new Error("Area not found");
+    if (!area) {
+      throw new Error("Area not found");
+    }
+    return this.formatArea(area);
   }
-  return this.formatArea(area);
-}
 
   async createAreaWithMeetingPoints(input: any) {
     try {
@@ -94,38 +96,40 @@ export class AreaService {
       }
     }
   }
-  
+
   async updateArea(updateAreaId: string, { name, isActive }) {
     try {
       // Ensure data exists
-      if ((name === undefined && isActive === undefined)) {
+      if (name === undefined && isActive === undefined) {
         throw new Error("No valid fields to update");
       }
-  
+
       // Convert ID to number
       const areaId = Number(updateAreaId);
-      if (isNaN(areaId)) {
+      if (Number.isNaN(areaId)) {
         throw new Error("Invalid area ID");
       }
-  
+
       // Validate `name`
       if (name !== undefined) {
         if (typeof name !== "string" || name.trim() === "") {
           throw new Error("Invalid area name");
         }
       }
-  
+
       // Validate `isActive`
       if (isActive !== undefined && typeof isActive !== "boolean") {
         throw new Error("Invalid isActive value");
       }
-  
+
       // Check if area exists
-      const existingArea = await this.prisma.area.findUnique({ where: { id: areaId } });
+      const existingArea = await this.prisma.area.findUnique({
+        where: { id: areaId },
+      });
       if (!existingArea) {
         throw new Error("Area not found");
       }
-  
+
       // Update the area
       const updatedArea = await this.prisma.area.update({
         where: { id: areaId },
@@ -135,7 +139,7 @@ export class AreaService {
         },
         include: { meeting_points: true },
       });
-  
+
       console.log("Update successful:", updatedArea);
       return this.formatArea(updatedArea);
     } catch (error) {
@@ -148,7 +152,7 @@ export class AreaService {
       }
     }
   }
-  
+
   // Delete Area with Validation
   async deleteArea(id: string) {
     try {
@@ -158,54 +162,51 @@ export class AreaService {
       }
       const areaId = Number(id);
       if (isNaN(areaId)) {
-      throw new Error("Area ID must be a numeric string");
+        throw new Error("Area ID must be a numeric string");
       }
 
-     // Verify area exists
-    const area = await this.prisma.area.findUnique({
-      where: { id: areaId }
-    });
+      // Verify area exists
+      const area = await this.prisma.area.findUnique({
+        where: { id: areaId },
+      });
 
-    if (!area) {
-      throw new Error(`Area with ID ${id} not found`);
-    }
-
-  // Delete in proper sequence using transaction
- return await this.prisma.$transaction(async (prisma) => {
-
-  await prisma.rideMeetingPoint.deleteMany({
-    where: {
-      meeting_point: {
-        area_id: areaId
+      if (!area) {
+        throw new Error(`Area with ID ${id} not found`);
       }
-    }
-  });
 
-      await prisma.ride.deleteMany({
-        where: {
-          area_id: areaId
-        }
+      // Delete in proper sequence using transaction
+      return await this.prisma.$transaction(async (prisma) => {
+        await prisma.rideMeetingPoint.deleteMany({
+          where: {
+            meeting_point: {
+              area_id: areaId,
+            },
+          },
+        });
+
+        await prisma.ride.deleteMany({
+          where: {
+            area_id: areaId,
+          },
+        });
+
+        await prisma.meetingPoint.deleteMany({
+          where: {
+            area_id: areaId,
+          },
+        });
+
+        await prisma.area.delete({
+          where: { id: areaId },
+        });
+
+        return true;
       });
-
-     
-      await prisma.meetingPoint.deleteMany({
-        where: {
-          area_id: areaId
-        }
-      });
-
-
-      await prisma.area.delete({
-        where: { id: areaId }
-      });
-
-      return true;
-    });
-
     } catch (error) {
       console.error("Error deleting area:", error);
-      throw new Error(error instanceof Error ? error.message : "Failed to delete area");
+      throw new Error(
+        error instanceof Error ? error.message : "Failed to delete area",
+      );
     }
   }
-
 }

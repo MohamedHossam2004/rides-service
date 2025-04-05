@@ -25,7 +25,7 @@ model MeetingPoint {
   longitude Float
   latitude  Float
   area_id   Int
-  area      Area    @relation(fields: [area_id], references: [id])
+  area      Area    @relation(fields: [area_id], references: [id], onDelete: Cascade)
   is_active Boolean @default(true)
 
   ride_meeting_points RideMeetingPoint[]
@@ -37,7 +37,7 @@ model MeetingPoint {
 model Ride {
   id              Int        @id @default(autoincrement())
   area_id         Int
-  area            Area       @relation(fields: [area_id], references: [id])
+  area            Area       @relation(fields: [area_id], references: [id], onDelete: Cascade)
   to_giu          Boolean
   status          RideStatus @default(PENDING)
   driver_id       Int
@@ -68,7 +68,7 @@ model RideMeetingPoint {
   ride_id          Int
   ride             Ride         @relation(fields: [ride_id], references: [id], onDelete: Cascade)
   meeting_point_id Int
-  meeting_point    MeetingPoint @relation(fields: [meeting_point_id], references: [id])
+  meeting_point    MeetingPoint @relation(fields: [meeting_point_id], references: [id], onDelete: Cascade)
   price            Int
   order_index      Int
 
@@ -80,7 +80,7 @@ model RideMeetingPoint {
 model RideReview {
   id         Int      @id @default(autoincrement())
   ride_id    Int
-  ride       Ride     @relation(fields: [ride_id], references: [id])
+  ride       Ride     @relation(fields: [ride_id], references: [id], onDelete: Cascade)
   driver_id  Int
   rider_id   Int
   rating     Int
