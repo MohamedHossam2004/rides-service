@@ -11,5 +11,7 @@ export const resolvers = {
   Query: {
     ...reviewResolvers.Query,
     ...areaResolvers.Query,
+    ...rideResolvers.Query, 
   },
+  
 };
