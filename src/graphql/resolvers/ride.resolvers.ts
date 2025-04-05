@@ -7,14 +7,25 @@ export const rideResolvers = {
       return rideService.createRide(args);
     },
 
-    addSeat: async (_, { rideId }, { prisma }) => {
+    addPassenger: async (
+      _,
+      { rideId, passengerId, passengerName },
+      { prisma },
+    ) => {
       const rideService = new RideService(prisma);
-      return rideService.addSeat(Number(rideId));
+      return rideService.addPassenger({
+        rideId: Number(rideId),
+        passengerId: Number(passengerId),
+        passengerName,
+      });
     },
 
-    removeSeat: async (_, { rideId }, { prisma }) => {
+    removePassenger: async (_, { rideId, passengerId }, { prisma }) => {
       const rideService = new RideService(prisma);
-      return rideService.removeSeat(Number(rideId));
+      return rideService.removePassenger({
+        rideId: Number(rideId),
+        passengerId: Number(passengerId),
+      });
     },
   },
 };

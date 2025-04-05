@@ -3,6 +3,43 @@ import { PrismaClient } from "@prisma/client";
 export class RideService {
   constructor(private prisma: PrismaClient) {}
 
+  private formatRide(ride: any) {
+    return {
+      id: ride.id,
+      area: ride.area,
+      toGIU: ride.to_giu,
+      status: ride.status,
+      driverId: ride.driver_id,
+      girlsOnly: ride.girls_only,
+      seatsAvailable: ride.seats_available,
+      departureTime: ride.departure_time.toISOString(),
+      createdAt: ride.created_at.toISOString(),
+      updatedAt: ride.updated_at.toISOString(),
+      meetingPoints:
+        ride.ride_meeting_points?.map((rp: any) => ({
+          id: rp.id,
+          price: rp.price,
+          orderIndex: rp.order_index,
+          meetingPoint: rp.meeting_point
+            ? {
+                id: rp.meeting_point.id,
+                name: rp.meeting_point.name,
+                longitude: rp.meeting_point.longitude,
+                latitude: rp.meeting_point.latitude,
+                isActive: rp.meeting_point.is_active,
+              }
+            : null,
+        })) || [],
+      passengers:
+        ride.passengers?.map((p: any) => ({
+          id: p.id,
+          passengerId: p.passenger_id,
+          passengerName: p.passenger_name,
+          createdAt: p.created_at.toISOString(),
+        })) || [],
+    };
+  }
+
   async createRide(args: any) {
     try {
       const { areaId, departureTime, driverId, girlsOnly, toGIU, pricing } =
@@ -28,20 +65,25 @@ export class RideService {
         throw new Error("One or more meeting points are invalid for this area");
       }
 
-      const currentTime = new Date(); 
-      const cairoTimeOffset = 2 * 60 * 60 * 1000; 
-      const cairoCurrentTime = new Date(currentTime.getTime() + cairoTimeOffset);
+      const currentTime = new Date();
+      const cairoTimeOffset = 2 * 60 * 60 * 1000;
+      const cairoCurrentTime = new Date(
+        currentTime.getTime() + cairoTimeOffset,
+      );
 
-      const departureTimeDate = new Date(departureTime); 
-      const departureCairoTime = new Date(departureTimeDate.getTime() + cairoTimeOffset);
+      const departureTimeDate = new Date(departureTime);
+      const departureCairoTime = new Date(
+        departureTimeDate.getTime() + cairoTimeOffset,
+      );
 
-   
       if (departureCairoTime < cairoCurrentTime) {
         throw new Error("Departure time cannot be in the past");
       }
 
       // Check if the departure time is more than 48 hours ahead
-      const maxDepartureTime = new Date(cairoCurrentTime.getTime() + 48 * 60 * 60 * 1000);
+      const maxDepartureTime = new Date(
+        cairoCurrentTime.getTime() + 48 * 60 * 60 * 1000,
+      );
       if (departureCairoTime > maxDepartureTime) {
         throw new Error("Departure time cannot be more than 48 hours from now");
       }
@@ -81,6 +123,7 @@ export class RideService {
             },
             orderBy: { order_index: "asc" },
           },
+          passengers: true,
         },
       });
 
@@ -124,46 +167,117 @@ export class RideService {
     }
   }
 
-  async addSeat(rideId: number) {
+  async addPassenger(args: {
+    rideId: number;
+    passengerId: number;
+    passengerName: string;
+  }) {
+    const { rideId, passengerId, passengerName } = args;
+
     const ride = await this.prisma.ride.findUnique({
       where: { id: rideId },
-      select: { seats_available: true },
+      include: { passengers: true },
     });
 
-    if (!ride) throw new Error("Ride not found");
-    if (ride.seats_available >= 4) throw new Error("Cannot exceed 4 seats");
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
 
-    const updatedRide = await this.prisma.ride.update({
-      where: { id: rideId },
-      data: { seats_available: { increment: 1 } },
-      select: { id: true, seats_available: true },
+    if (ride.departure_time < new Date()) {
+      throw new Error("Ride has already departed");
+    }
+
+    if (ride.status !== "PENDING") {
+      throw new Error("Ride is not available");
+    }
+
+    // Check if there are seats available
+    if (ride.seats_available <= 0) {
+      throw new Error("No seats available");
+    }
+
+    // Check if passenger is already in the ride
+    const existingPassenger = ride.passengers.find(
+      (p) => p.passenger_id === passengerId,
+    );
+    if (existingPassenger) {
+      throw new Error("Passenger already added to this ride");
+    }
+
+    // Add passenger and decrement available seats in a transaction
+    const updatedRide = await this.prisma.$transaction(async (prisma) => {
+      await prisma.ridePassenger.create({
+        data: {
+          ride_id: rideId,
+          passenger_id: passengerId,
+          passenger_name: passengerName,
+        },
+      });
+
+      return prisma.ride.update({
+        where: { id: rideId },
+        data: { seats_available: { decrement: 1 } },
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: "asc" },
+          },
+          passengers: true,
+        },
+      });
     });
 
-    return {
-      id: updatedRide.id.toString(),
-      seatsAvailable: updatedRide.seats_available,
-    };
+    return this.formatRide(updatedRide);
   }
 
-  async removeSeat(rideId: number) {
+  // Remove a passenger from a ride
+  async removePassenger(args: { rideId: number; passengerId: number }) {
+    const { rideId, passengerId } = args;
+
+    // Check if ride exists
     const ride = await this.prisma.ride.findUnique({
       where: { id: rideId },
-      select: { seats_available: true },
+      include: { passengers: true },
     });
 
-    if (!ride) throw new Error("Ride not found");
-    if (ride.seats_available <= 0)
-      throw new Error("Cannot have negative seats");
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
 
-    const updatedRide = await this.prisma.ride.update({
-      where: { id: rideId },
-      data: { seats_available: { decrement: 1 } },
-      select: { id: true, seats_available: true },
+    // Check if passenger is in the ride
+    const passenger = ride.passengers.find(
+      (p) => p.passenger_id === passengerId,
+    );
+    if (!passenger) {
+      throw new Error("Passenger not found in this ride");
+    }
+
+    // Remove passenger and increment available seats in a transaction
+    const updatedRide = await this.prisma.$transaction(async (prisma) => {
+      await prisma.ridePassenger.delete({
+        where: {
+          ride_id_passenger_id: {
+            ride_id: rideId,
+            passenger_id: passengerId,
+          },
+        },
+      });
+
+      return prisma.ride.update({
+        where: { id: rideId },
+        data: { seats_available: { increment: 1 } },
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: "asc" },
+          },
+          passengers: true,
+        },
+      });
     });
 
-    return {
-      id: updatedRide.id.toString(),
-      seatsAvailable: updatedRide.seats_available,
-    };
+    return this.formatRide(updatedRide);
   }
 }

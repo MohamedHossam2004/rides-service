@@ -4,7 +4,7 @@ export const areaResolvers = {
   Query: {
     getAreas: async (_, __, { prisma }) => {
       const areaService = new AreaService(prisma);
-      return areaService.getAreas();  
+      return areaService.getAreas();
     },
     getArea: async (_, { id }, { prisma }) => {
       const areaService = new AreaService(prisma);
@@ -18,19 +18,18 @@ export const areaResolvers = {
     },
 
     updateArea: async (_, { id, name, isActive }, { prisma }) => {
-      if (!id || isNaN(Number(id))) {
+      if (!id || Number.isNaN(Number(id))) {
         throw new Error("Invalid area ID");
       }
-    
+
       const areaService = new AreaService(prisma);
-    
+
       return areaService.updateArea(id, { name, isActive });
     },
-    
+
     deleteArea: async (_, { id }, { prisma }) => {
       const areaService = new AreaService(prisma);
       return areaService.deleteArea(id);
     },
-
   },
 };
