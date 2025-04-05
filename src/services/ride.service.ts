@@ -28,6 +28,23 @@ export class RideService {
         throw new Error("One or more meeting points are invalid for this area");
       }
 
+      const currentTime = new Date(); 
+      const cairoTimeOffset = 2 * 60 * 60 * 1000; 
+      const cairoCurrentTime = new Date(currentTime.getTime() + cairoTimeOffset);
+
+      const departureTimeDate = new Date(departureTime); 
+      const departureCairoTime = new Date(departureTimeDate.getTime() + cairoTimeOffset);
+
+   
+      if (departureCairoTime < cairoCurrentTime) {
+        throw new Error("Departure time cannot be in the past");
+      }
+
+      // Check if the departure time is more than 48 hours ahead
+      const maxDepartureTime = new Date(cairoCurrentTime.getTime() + 48 * 60 * 60 * 1000);
+      if (departureCairoTime > maxDepartureTime) {
+        throw new Error("Departure time cannot be more than 48 hours from now");
+      }
       // Create Ride
       const newRide = await this.prisma.ride.create({
         data: {
