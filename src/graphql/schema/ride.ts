@@ -8,6 +8,13 @@ export const rideTypeDefs = gql`
     CANCELLED
   }
 
+  type RidePassenger {
+    id: ID!
+    passengerId: ID!
+    passengerName: String!
+    createdAt: String!
+  }
+
   type Ride {
     id: ID!
     area: Area!
@@ -21,12 +28,24 @@ export const rideTypeDefs = gql`
     updatedAt: String!
     meetingPoints: [RideMeetingPoint!]!
     reviews: [RideReview!]!
+    passengers: [RidePassenger!]!
   }
 
   type PaginatedRides {
     rides: [Ride!]!
     total: Int!
     hasMore: Boolean!
+  }
+
+  extend type Query {
+    getRide(id: ID!): Ride
+    getRides(
+      areaId: Int
+      driverId: Int
+      status: RideStatus
+      limit: Int
+      offset: Int
+    ): PaginatedRides!
   }
 
   extend type Mutation {
@@ -39,8 +58,9 @@ export const rideTypeDefs = gql`
       pricing: [PricingInput!]!
     ): Ride!
 
-    addSeat(rideId: Int!): Ride
-    removeSeat(rideId: Int!): Ride
+    addPassenger(rideId: Int!, passengerId: Int!, passengerName: String!): Ride!
+
+    removePassenger(rideId: Int!, passengerId: Int!): Ride!
   }
 
   input PricingInput {

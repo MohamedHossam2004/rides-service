@@ -49,6 +49,7 @@ model Ride {
 
   ride_meeting_points RideMeetingPoint[]
   reviews             RideReview[]
+  passengers          RidePassenger[]
 
   @@index([area_id])
   @@index([driver_id])
@@ -91,4 +92,17 @@ model RideReview {
   @@index([ride_id])
   @@index([driver_id])
   @@index([rider_id])
+}
+
+model RidePassenger {
+  id             Int      @id @default(autoincrement())
+  ride_id        Int
+  ride           Ride     @relation(fields: [ride_id], references: [id], onDelete: Cascade)
+  passenger_id   Int
+  passenger_name String
+  created_at     DateTime @default(now())
+
+  @@unique([ride_id, passenger_id])
+  @@index([ride_id])
+  @@index([passenger_id])
 }

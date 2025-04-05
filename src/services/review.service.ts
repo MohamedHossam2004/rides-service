@@ -45,14 +45,30 @@ export class ReviewService {
   }) {
     try {
       const { rideId, riderId, rating, review } = args;
+      const rideIdNum = Number(rideId);
+      const riderIdNum = Number(riderId);
 
       // Validate ride exists
       const ride = await this.prisma.ride.findUnique({
-        where: { id: Number(rideId) },
+        where: { id: rideIdNum },
+        include: {
+          passengers: true,
+        },
       });
 
       if (!ride) {
         throw new Error(`Ride with ID ${rideId} not found`);
+      }
+
+      // Verify that the rider was actually a passenger in this ride
+      const wasPassenger = ride.passengers.some(
+        (p) => p.passenger_id === riderIdNum,
+      );
+
+      if (!wasPassenger) {
+        throw new Error(
+          "You can only review rides you participated in as a passenger",
+        );
       }
 
       if (ride.status !== "COMPLETED") {
@@ -62,8 +78,8 @@ export class ReviewService {
       const existingReview = await this.prisma.rideReview.findUnique({
         where: {
           ride_id_rider_id: {
-            ride_id: Number(rideId),
-            rider_id: Number(riderId),
+            ride_id: rideIdNum,
+            rider_id: riderIdNum,
           },
         },
       });
@@ -79,8 +95,8 @@ export class ReviewService {
 
       const newReview = await this.prisma.rideReview.create({
         data: {
-          ride_id: Number(rideId),
-          rider_id: Number(riderId),
+          ride_id: rideIdNum,
+          rider_id: riderIdNum,
           driver_id: ride.driver_id,
           rating,
           review: review || null,
@@ -104,7 +120,6 @@ export class ReviewService {
       throw new Error("An unknown error occurred while creating the review");
     }
   }
-
   async updateRideReview(
     id: string | number,
     riderId: string | number,
