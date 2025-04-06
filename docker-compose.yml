@@ -1,0 +1,9 @@
+services:
+  rides-service:
+    build: .
+    ports:
+      - "4000:4000"
+    environment:
+      - NODE_ENV=${NODE_ENV}
+      - DATABASE_URL=${DATABASE_URL}
+    restart: unless-stopped
