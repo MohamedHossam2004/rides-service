@@ -29,6 +29,22 @@ export const rideResolvers = {
     },
   },
   Query: {
+    ride: async (_, { id }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getRide(id);
+    },
+
+    getRides: async (_, { areaId, driverId, status, limit, offset }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getRides({
+        areaId: areaId ? Number(areaId) : undefined,
+        driverId: driverId ? Number(driverId) : undefined,
+        status,
+        limit: limit ? Number(limit) : 10,
+        offset: offset ? Number(offset) : 0
+      });
+    },
+    
     searchRides: async (_, args, { prisma }) => {
       try {
         const rideService = new RideService(prisma);

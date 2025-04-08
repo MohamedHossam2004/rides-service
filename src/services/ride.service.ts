@@ -412,6 +412,89 @@ export class RideService {
     }
   }
   
+  async getRide(id: string | number) {
+    try {
+      const rideId = Number(id);
+      
+      const ride = await this.prisma.ride.findUnique({
+        where: { id: rideId },
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: 'asc' },
+          },
+          passengers: true,
+          reviews: true,
+        },
+      });
   
+      if (!ride) {
+        throw new Error(`Ride with ID ${id} not found`);
+      }
+  
+      return this.formatRide(ride);
+    } catch (error) {
+      console.error(`Error fetching ride with ID ${id}:`, error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error(`An unknown error occurred while fetching ride with ID ${id}`);
+    }
+  }
+
+  async getRides(filters: {
+    areaId?: number;
+    driverId?: number;
+    status?: string;
+    limit?: number;
+    offset?: number;
+  }) {
+    try {
+      const { areaId, driverId, status, limit = 10, offset = 0 } = filters;
+      
+      // Build the where clause based on provided filters
+      const where: any = {};
+      if (areaId !== undefined) where.area_id = areaId;
+      if (driverId !== undefined) where.driver_id = driverId;
+      if (status !== undefined) where.status = status;
+  
+      // Count total rides matching the criteria
+      const totalCount = await this.prisma.ride.count({ where });
+      
+      // Fetch rides with pagination
+      const rides = await this.prisma.ride.findMany({
+        where,
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: 'asc' },
+          },
+          passengers: true,
+          reviews: true,
+        },
+        orderBy: { departure_time: 'desc' },
+        skip: offset,
+        take: limit,
+      });
+  
+      // Format rides
+      const formattedRides = rides.map(ride => this.formatRide(ride));
+      
+      // Return paginated result
+      return {
+        rides: formattedRides,
+        total: totalCount,
+        hasMore: offset + rides.length < totalCount,
+      };
+    } catch (error) {
+      console.error("Error fetching rides:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error("An unknown error occurred while fetching rides");
+    }
+  }
     
 }

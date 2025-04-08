@@ -1,10 +1,14 @@
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { setupApolloServer } from "./config/apollo";
 import { getPrismaClient } from "./config/prisma";
+import { initKafka, disconnectKafka } from "./config/kafka";
 
 async function startServer() {
   // Initialize Prisma client
   const prisma = getPrismaClient();
+  
+  // Initialize Kafka
+  await initKafka(prisma);
 
   // Create Apollo Server
   const server = setupApolloServer();
@@ -16,8 +20,15 @@ async function startServer() {
   });
 
   console.log(`🚀 Server ready at ${url}`);
+  
+  // Handle graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('SIGTERM signal received: closing HTTP server');
+    await disconnectKafka();
+    process.exit(0);
+  });
 }
 
-startServer().catch((error) => {
-  console.error("Error starting server:", error);
+startServer().catch((err) => {
+  console.error("Failed to start server:", err);
 });
