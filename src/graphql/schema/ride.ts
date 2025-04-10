@@ -69,6 +69,8 @@ export const rideTypeDefs = gql`
     addPassenger(rideId: Int!, passengerId: Int!): Ride!
 
     removePassenger(rideId: Int!, passengerId: Int!): Ride!
+    
+    updateRideStatus(rideId: Int!, status: RideStatus!): Ride!
   }
 
   input PricingInput {

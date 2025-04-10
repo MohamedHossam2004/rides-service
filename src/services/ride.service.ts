@@ -560,4 +560,90 @@ export class RideService {
       throw new Error("An unknown error occurred while fetching rides");
     }
   }
+  async updateRideStatus(args: {
+    rideId: number;
+    status: string;
+  }) {
+    const { rideId, status } = args;
+  
+    const ride = await this.prisma.ride.findUnique({
+      where: { id: rideId }
+    });
+  
+    if (!ride) {
+      throw new Error("Ride not found");
+    }
+  
+    // Validate status transition
+    if (ride.status === "COMPLETED" && status !== "COMPLETED") {
+      throw new Error("Cannot change status of a completed ride");
+    }
+  
+    if (ride.status === "CANCELLED" && status !== "CANCELLED") {
+      throw new Error("Cannot change status of a cancelled ride");
+    }
+  
+    // Update ride status - Fix type error by casting status to RideStatus
+    const updatedRide = await this.prisma.ride.update({
+      where: { id: rideId },
+      data: { status: status as any }, // Using type assertion to fix the type error
+      include: {
+        area: true,
+        ride_meeting_points: {
+          include: { meeting_point: true },
+          orderBy: { order_index: "asc" },
+        },
+        passengers: true,
+      },
+    });
+  
+    // If ride is cancelled, emit an event for each passenger
+    if (status === "CANCELLED" && this.producer) {
+      // Fix type error by ensuring passengers exists on updatedRide
+      for (const passenger of updatedRide.passengers || []) {
+        await this.producer.send({
+          topic: "passenger-removed-from-ride",
+          messages: [
+            {
+              key: String(updatedRide.id),
+              value: JSON.stringify({
+                rideId: updatedRide.id,
+                passengerId: passenger.passenger_id,
+              }),
+            },
+          ],
+        });
+      }
+      
+      // Also send a ride-status-changed event
+      await this.producer.send({
+        topic: "ride-status-changed",
+        messages: [
+          {
+            key: String(updatedRide.id),
+            value: JSON.stringify({
+              rideId: updatedRide.id,
+              status: status,
+            }),
+          },
+        ],
+      });
+    } else if (this.producer) {
+      // For other status changes, just send the status change event
+      await this.producer.send({
+        topic: "ride-status-changed",
+        messages: [
+          {
+            key: String(updatedRide.id),
+            value: JSON.stringify({
+              rideId: updatedRide.id,
+              status: status,
+            }),
+          },
+        ],
+      });
+    }
+  
+    return this.formatRide(updatedRide);
+  }
 }

@@ -26,6 +26,14 @@ export const rideResolvers = {
         passengerId: Number(passengerId),
       });
     },
+    
+    updateRideStatus: async (_, { rideId, status }, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
+      return rideService.updateRideStatus({
+        rideId: Number(rideId),
+        status: status,
+      });
+    }
   },
   Query: {
     ride: async (_, { id }, { prisma }) => {
