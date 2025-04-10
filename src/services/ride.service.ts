@@ -1,7 +1,17 @@
 import { PrismaClient } from "@prisma/client";
+import { Producer } from "kafkajs";
 
 export class RideService {
-  constructor(private prisma: PrismaClient) {}
+  private producer: Producer | null;
+  
+  constructor(private prisma: PrismaClient, producer?: Producer) {
+    this.producer = producer || null;
+  }
+
+  // Set producer method to be used after initialization
+  setProducer(producer: Producer) {
+    this.producer = producer;
+  }
 
   private formatRide(ride: any) {
     return {
@@ -36,6 +46,13 @@ export class RideService {
           passengerId: p.passenger_id,
           passengerName: p.passenger_name,
           createdAt: p.created_at.toISOString(),
+        })) || [],
+      reviews:
+        ride.reviews?.map((r: any) => ({
+          id: r.id,
+          rating: r.rating,
+          review: r.review,
+          createdAt: r.created_at.toISOString(),
         })) || [],
     };
   }
@@ -131,6 +148,19 @@ export class RideService {
         throw new Error("Ride with relations not found");
       }
 
+      // Send Kafka event if producer is available
+      if (this.producer) {
+        await this.producer.send({
+          topic: "ride-created",
+          messages: [
+            {
+              key: String(rideWithRelations.id),
+              value: JSON.stringify(rideWithRelations),
+            },
+          ],
+        });
+      }
+
       const rideData = {
         driverId: rideWithRelations.driver_id,
         girlsOnly: rideWithRelations.girls_only,
@@ -170,32 +200,31 @@ export class RideService {
   async addPassenger(args: {
     rideId: number;
     passengerId: number;
-    passengerName: string;
   }) {
-    const { rideId, passengerId, passengerName } = args;
-
+    const { rideId, passengerId } = args;
+  
     const ride = await this.prisma.ride.findUnique({
       where: { id: rideId },
       include: { passengers: true },
     });
-
+  
     if (!ride) {
       throw new Error("Ride not found");
     }
-
+  
     if (ride.departure_time < new Date()) {
       throw new Error("Ride has already departed");
     }
-
+  
     if (ride.status !== "PENDING") {
       throw new Error("Ride is not available");
     }
-
+  
     // Check if there are seats available
     if (ride.seats_available <= 0) {
       throw new Error("No seats available");
     }
-
+  
     // Check if passenger is already in the ride
     const existingPassenger = ride.passengers.find(
       (p) => p.passenger_id === passengerId,
@@ -203,17 +232,17 @@ export class RideService {
     if (existingPassenger) {
       throw new Error("Passenger already added to this ride");
     }
-
+  
     // Add passenger and decrement available seats in a transaction
     const updatedRide = await this.prisma.$transaction(async (prisma) => {
       await prisma.ridePassenger.create({
         data: {
           ride_id: rideId,
           passenger_id: passengerId,
-          passenger_name: passengerName,
+          passenger_name: `User ${passengerId}`, // Default passenger name
         },
       });
-
+  
       return prisma.ride.update({
         where: { id: rideId },
         data: { seats_available: { decrement: 1 } },
@@ -227,43 +256,60 @@ export class RideService {
         },
       });
     });
-
+  
+    // Send Kafka event if producer is available
+    if (this.producer) {
+      await this.producer.send({
+        topic: "passenger-added-to-ride",
+        messages: [
+          {
+            key: String(updatedRide.id),
+            value: JSON.stringify({
+              rideId: updatedRide.id,
+              passengerId: passengerId,
+            }),
+          },
+        ],
+      });
+    }
+  
     return this.formatRide(updatedRide);
   }
-
+  
   // Remove a passenger from a ride
-  async removePassenger(args: { rideId: number; passengerId: number }) {
+  async removePassenger(args: {
+    rideId: number;
+    passengerId: number;
+  }) {
     const { rideId, passengerId } = args;
-
-    // Check if ride exists
+  
     const ride = await this.prisma.ride.findUnique({
       where: { id: rideId },
       include: { passengers: true },
     });
-
+  
     if (!ride) {
       throw new Error("Ride not found");
     }
-
+  
     // Check if passenger is in the ride
-    const passenger = ride.passengers.find(
-      (p) => p.passenger_id === passengerId,
+    const existingPassenger = ride.passengers.find(
+      (p) => p.passenger_id === passengerId
     );
-    if (!passenger) {
+    
+    if (!existingPassenger) {
       throw new Error("Passenger not found in this ride");
     }
-
+  
     // Remove passenger and increment available seats in a transaction
     const updatedRide = await this.prisma.$transaction(async (prisma) => {
-      await prisma.ridePassenger.delete({
+      await prisma.ridePassenger.deleteMany({
         where: {
-          ride_id_passenger_id: {
-            ride_id: rideId,
-            passenger_id: passengerId,
-          },
+          ride_id: rideId,
+          passenger_id: passengerId,
         },
       });
-
+  
       return prisma.ride.update({
         where: { id: rideId },
         data: { seats_available: { increment: 1 } },
@@ -277,9 +323,26 @@ export class RideService {
         },
       });
     });
-
+  
+    // Emit passenger-removed-from-ride event if producer is available
+    if (this.producer) {
+      await this.producer.send({
+        topic: "passenger-removed-from-ride",
+        messages: [
+          {
+            key: String(updatedRide.id),
+            value: JSON.stringify({
+              rideId: updatedRide.id,
+              passengerId: passengerId,
+            }),
+          },
+        ],
+      });
+    }
+  
     return this.formatRide(updatedRide);
   }
+
   async searchRides(filters: {
     toGIU?: boolean;
     girlsOnly?: boolean;
@@ -349,6 +412,7 @@ export class RideService {
       return [];
     }
   }
+
   // not tested need userid
   async getActiveRideForUser(userId: number) {
     try {
@@ -496,5 +560,4 @@ export class RideService {
       throw new Error("An unknown error occurred while fetching rides");
     }
   }
-    
 }

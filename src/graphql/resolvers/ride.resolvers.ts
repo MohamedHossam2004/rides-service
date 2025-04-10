@@ -2,26 +2,25 @@ import { RideService } from "../../services/ride.service";
 
 export const rideResolvers = {
   Mutation: {
-    createRide: async (_, args, { prisma }) => {
-      const rideService = new RideService(prisma);
+    createRide: async (_, args, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
       return rideService.createRide(args);
     },
 
     addPassenger: async (
       _,
-      { rideId, passengerId, passengerName },
-      { prisma },
+      { rideId, passengerId },
+      { prisma, producer },
     ) => {
-      const rideService = new RideService(prisma);
+      const rideService = new RideService(prisma, producer);
       return rideService.addPassenger({
         rideId: Number(rideId),
         passengerId: Number(passengerId),
-        passengerName,
       });
     },
 
-    removePassenger: async (_, { rideId, passengerId }, { prisma }) => {
-      const rideService = new RideService(prisma);
+    removePassenger: async (_, { rideId, passengerId }, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
       return rideService.removePassenger({
         rideId: Number(rideId),
         passengerId: Number(passengerId),

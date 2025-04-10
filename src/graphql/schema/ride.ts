@@ -66,7 +66,7 @@ export const rideTypeDefs = gql`
       pricing: [PricingInput!]!
     ): Ride!
 
-    addPassenger(rideId: Int!, passengerId: Int!, passengerName: String!): Ride!
+    addPassenger(rideId: Int!, passengerId: Int!): Ride!
 
     removePassenger(rideId: Int!, passengerId: Int!): Ride!
   }

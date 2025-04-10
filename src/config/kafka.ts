@@ -4,6 +4,12 @@ import { RideService } from "../services/ride.service";
 
 let producer: Producer;
 let consumer: Consumer;
+let rideService: RideService;
+
+// Add this function to get the producer
+export function getKafkaProducer(): Producer | null {
+  return producer || null;
+}
 
 export async function initKafka(prisma: PrismaClient) {
   const kafka = new Kafka({
@@ -20,29 +26,61 @@ export async function initKafka(prisma: PrismaClient) {
     await producer.connect();
     console.log("Kafka producer connected successfully");
 
+    // Create ride service with producer
+    rideService = new RideService(prisma);
+    rideService.setProducer(producer);
+
     await consumer.connect();
     console.log("Kafka consumer connected successfully");
 
-    // Subscribe to booking-created topic
+    // Subscribe to topics
     await consumer.subscribe({ topic: "booking-created", fromBeginning: false });
-    // Subscribe to booking-failed topic
     await consumer.subscribe({ topic: "booking-failed", fromBeginning: false });
 
     // Set up message handler
     await consumer.run({
       eachMessage: async ({ topic, partition, message }) => {
         try {
-          const messageValue = JSON.parse(message.value!.toString());
+          if (!message.value) return;
+          
+          const messageValue = JSON.parse(message.value.toString());
           
           if (topic === "booking-created") {
-            const rideService = new RideService(prisma);
-            
             try {
+              // Extract all necessary data from the message
+              const { bookingId, rideId, userId, meetingPointId } = messageValue;
+              
+              // Perform additional validation if needed
+              const ride = await prisma.ride.findUnique({
+                where: { id: Number(rideId) },
+                include: { passengers: true }
+              });
+              
+              if (!ride) {
+                throw new Error("Ride not found");
+              }
+              
+              if (ride.status !== "PENDING") {
+                throw new Error("Ride is not available");
+              }
+              
+              if (ride.seats_available <= 0) {
+                throw new Error("No seats available");
+              }
+              
+              // Check if passenger is already in the ride
+              const existingPassenger = ride.passengers.find(
+                (p) => p.passenger_id === Number(userId)
+              );
+              
+              if (existingPassenger) {
+                throw new Error("Passenger already added to this ride");
+              }
+              
               // Try to add passenger to ride
               await rideService.addPassenger({
-                rideId: messageValue.rideId,
-                passengerId: messageValue.userId,
-                passengerName: messageValue.passengerName || `User ${messageValue.userId}`,
+                rideId: Number(rideId),
+                passengerId: Number(userId),
               });
               
               // If successful, send passenger-added event
@@ -50,17 +88,17 @@ export async function initKafka(prisma: PrismaClient) {
                 topic: "passenger-added",
                 messages: [
                   {
-                    key: String(messageValue.bookingId),
+                    key: String(bookingId),
                     value: JSON.stringify({
-                      bookingId: messageValue.bookingId,
-                      rideId: messageValue.rideId,
-                      userId: messageValue.userId,
+                      bookingId: bookingId,
+                      rideId: rideId,
+                      userId: userId,
                     }),
                   },
                 ],
               });
               
-              console.log(`Passenger ${messageValue.userId} added to ride ${messageValue.rideId}`);
+              console.log(`Passenger ${userId} added to ride ${rideId}`);
             } catch (error) {
               console.error("Error adding passenger to ride:", error);
               
@@ -82,49 +120,18 @@ export async function initKafka(prisma: PrismaClient) {
             }
           } else if (topic === "booking-failed") {
             // Handle booking-failed event
-            try {
-              // Extract ride and user information from the message
-              const { bookingId, rideId, userId } = messageValue;
-              
-              if (rideId && userId) {
-                const rideService = new RideService(prisma);
-                
-                // Try to remove the passenger from the ride
-                await rideService.removePassenger({
-                  rideId: Number(rideId),
-                  passengerId: Number(userId),
-                });
-                
-                // Send confirmation that passenger was removed
-                await producer.send({
-                  topic: "passenger-removed",
-                  messages: [
-                    {
-                      key: String(bookingId),
-                      value: JSON.stringify({
-                        bookingId,
-                        rideId,
-                        userId,
-                      }),
-                    },
-                  ],
-                });
-                
-                console.log(`Passenger ${userId} removed from ride ${rideId} due to booking failure`);
-              } else {
-                console.log(`Missing ride or user information for booking ${bookingId}`);
-              }
-            } catch (error) {
-              console.error("Error handling booking-failed event:", error);
-            }
+            // ... existing code ...
           }
         } catch (error) {
           console.error("Error processing Kafka message:", error);
         }
       },
     });
+
+    console.log("Kafka consumer started successfully");
   } catch (error) {
     console.error("Error setting up Kafka:", error);
+    throw error;
   }
 }
 

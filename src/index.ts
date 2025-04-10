@@ -1,7 +1,7 @@
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { setupApolloServer } from "./config/apollo";
 import { getPrismaClient } from "./config/prisma";
-import { initKafka, disconnectKafka } from "./config/kafka";
+import { initKafka, disconnectKafka, getKafkaProducer } from "./config/kafka";
 
 async function startServer() {
   // Initialize Prisma client
@@ -9,6 +9,9 @@ async function startServer() {
   
   // Initialize Kafka
   await initKafka(prisma);
+  
+  // Get the Kafka producer
+  const producer = getKafkaProducer();
 
   // Create Apollo Server
   const server = setupApolloServer();
@@ -16,7 +19,7 @@ async function startServer() {
   // Start the server using the standalone server
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
-    context: async () => ({ prisma }),
+    context: async () => ({ prisma, producer }),
   });
 
   console.log(`🚀 Server ready at ${url}`);
