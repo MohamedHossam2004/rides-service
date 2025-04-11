@@ -2,33 +2,56 @@ import { RideService } from "../../services/ride.service";
 
 export const rideResolvers = {
   Mutation: {
-    createRide: async (_, args, { prisma }) => {
-      const rideService = new RideService(prisma);
+    createRide: async (_, args, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
       return rideService.createRide(args);
     },
 
     addPassenger: async (
       _,
-      { rideId, passengerId, passengerName },
-      { prisma },
+      { rideId, passengerId },
+      { prisma, producer },
     ) => {
-      const rideService = new RideService(prisma);
+      const rideService = new RideService(prisma, producer);
       return rideService.addPassenger({
         rideId: Number(rideId),
         passengerId: Number(passengerId),
-        passengerName,
       });
     },
 
-    removePassenger: async (_, { rideId, passengerId }, { prisma }) => {
-      const rideService = new RideService(prisma);
+    removePassenger: async (_, { rideId, passengerId }, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
       return rideService.removePassenger({
         rideId: Number(rideId),
         passengerId: Number(passengerId),
       });
     },
+    
+    updateRideStatus: async (_, { rideId, status }, { prisma, producer }) => {
+      const rideService = new RideService(prisma, producer);
+      return rideService.updateRideStatus({
+        rideId: Number(rideId),
+        status: status,
+      });
+    }
   },
   Query: {
+    ride: async (_, { id }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getRide(id);
+    },
+
+    getRides: async (_, { areaId, driverId, status, limit, offset }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getRides({
+        areaId: areaId ? Number(areaId) : undefined,
+        driverId: driverId ? Number(driverId) : undefined,
+        status,
+        limit: limit ? Number(limit) : 10,
+        offset: offset ? Number(offset) : 0
+      });
+    },
+    
     searchRides: async (_, args, { prisma }) => {
       try {
         const rideService = new RideService(prisma);
