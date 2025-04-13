@@ -582,10 +582,7 @@ export class RideService {
       throw new Error("Cannot change status of a completed ride");
     }
   
-    if (ride.status === "CANCELLED" && status !== "CANCELLED") {
-      throw new Error("Cannot change status of a cancelled ride");
-    }
-  
+    
     // Update ride status - Fix type error by casting status to RideStatus
     const updatedRide = await this.prisma.ride.update({
       where: { id: rideId },
@@ -599,6 +596,80 @@ export class RideService {
         passengers: true,
       },
     });
+    
+    // Get passenger emails for any status update
+    const passengerEmails = updatedRide.passengers.map(
+      passenger => passenger.passenger_email || `user${passenger.passenger_id}@example.com`
+    );
+
+    if (passengerEmails.length > 0) {
+      try {
+        // Call notification service API
+        // Use the service name from docker-compose as the hostname
+        const notificationServiceUrl = process.env.NOTIFICATION_SERVICE_URL || 'http://notification-service:3001';
+        console.log(`Attempting to connect to notification service at: ${notificationServiceUrl}`);
+        
+        if (status === "CANCELLED") {
+          // For cancelled rides, use the existing cancellation notification
+          const notificationResponse = await fetch(
+            `${notificationServiceUrl}/notifications/notifyCancelRide`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                type: 'rideCanceled',
+                to: passengerEmails,
+                subject: 'Your Ride Has Been Cancelled',
+                payload: {
+                  fromPlace: updatedRide.area.name,
+                  toPlace: updatedRide.to_giu ? "GIU" : "Home",
+                  date: updatedRide.departure_time.toLocaleString(),
+                },
+              }),
+            }
+          );
+          
+          if (!notificationResponse.ok) {
+            console.error('Failed to send cancellation notifications:', await notificationResponse.text());
+          } else {
+            console.log(`Cancellation notifications sent to ${passengerEmails.length} passengers`);
+          }
+        } else {
+          // For other status updates, use the general notification endpoint
+          const notificationResponse = await fetch(
+            `${notificationServiceUrl}/notifications/notify`,
+            {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                type: 'rideUpdate',
+                to: passengerEmails,
+                subject: `Your Ride Status Has Been Updated to ${status}`,
+                payload: {
+                  username: 'Passenger', // Generic username
+                  status: status,
+                  fromPlace: updatedRide.area.name,
+                  toPlace: updatedRide.to_giu ? "GIU" : "Home",
+                  date: updatedRide.departure_time.toLocaleString(),
+                },
+              }),
+            }
+          );
+          
+          if (!notificationResponse.ok) {
+            console.error(`Failed to send ${status} status update notifications:`, await notificationResponse.text());
+          } else {
+            console.log(`Status update notifications sent to ${passengerEmails.length} passengers`);
+          }
+        }
+      } catch (error) {
+        console.error('Error calling notification service:', error);
+      }
+    }
   
     // If ride is cancelled, emit an event for each passenger
     if (status === "CANCELLED" && this.producer) {
