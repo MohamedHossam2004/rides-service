@@ -104,6 +104,8 @@ export async function initKafka(prisma: PrismaClient) {
                     value: JSON.stringify({
                       bookingId,
                       price,
+                      rideId,
+                      userId
                     }),
                   },
                 ],
