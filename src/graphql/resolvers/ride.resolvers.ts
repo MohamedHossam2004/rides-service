@@ -1,33 +1,41 @@
 import { RideService } from "../../services/ride.service";
+import { ensureAuthenticated, ensureDriver, ensureAdmin } from "../../middleware/auth.middleware";
 
 export const rideResolvers = {
   Mutation: {
-    createRide: async (_, args, { prisma, producer }) => {
+    createRide: async (_, args, { prisma, producer, user }) => {
+      const authenticatedUser = ensureDriver(user);
+      
       const rideService = new RideService(prisma, producer);
-      return rideService.createRide(args);
+      return rideService.createRide({
+        ...args,
+        driverId: authenticatedUser.userId // Use the authenticated user's ID
+      });
     },
 
-    addPassenger: async (
-      _,
-      { rideId, passengerId },
-      { prisma, producer },
-    ) => {
+    addPassenger: async (_, { rideId }, { prisma, producer, user }) => {
+      ensureAuthenticated(user); // Ensure user is authenticated
+
       const rideService = new RideService(prisma, producer);
       return rideService.addPassenger({
         rideId: Number(rideId),
-        passengerId: Number(passengerId),
+        passengerId: user.userId, // Use the authenticated user's ID as passengerId
       });
     },
 
-    removePassenger: async (_, { rideId, passengerId }, { prisma, producer }) => {
+    removePassenger: async (_, { rideId }, { prisma, producer, user }) => {
+      ensureAuthenticated(user); // Ensure user is authenticated
+
       const rideService = new RideService(prisma, producer);
       return rideService.removePassenger({
         rideId: Number(rideId),
-        passengerId: Number(passengerId),
+        passengerId: user.userId, // Use the authenticated user's ID as passengerId
       });
     },
     
-    updateRideStatus: async (_, { rideId, status }, { prisma, producer }) => {
+    updateRideStatus: async (_, { rideId, status }, { prisma, producer, user }) => {
+      ensureDriver(user); // Ensure user is a driver
+
       const rideService = new RideService(prisma, producer);
       return rideService.updateRideStatus({
         rideId: Number(rideId),
@@ -36,12 +44,15 @@ export const rideResolvers = {
     }
   },
   Query: {
-    ride: async (_, { id }, { prisma }) => {
+    ride: async (_, { id }, { prisma, user }) => {
+      ensureAuthenticated(user); 
+
       const rideService = new RideService(prisma);
       return rideService.getRide(id);
     },
 
-    getRides: async (_, { areaId, driverId, status, limit, offset }, { prisma }) => {
+    getRides: async (_, { areaId, driverId, status, limit, offset }, { prisma, user }) => {
+
       const rideService = new RideService(prisma);
       return rideService.getRides({
         areaId: areaId ? Number(areaId) : undefined,
@@ -52,7 +63,8 @@ export const rideResolvers = {
       });
     },
     
-    searchRides: async (_, args, { prisma }) => {
+    searchRides: async (_, args, { prisma, user }) => {
+
       try {
         const rideService = new RideService(prisma);
         const result = await rideService.searchRides(args);
@@ -63,9 +75,11 @@ export const rideResolvers = {
       }
     },
 
-    viewActiveRide: async (_, { userId }, { prisma }) => {
+    viewActiveRide: async (_, __, { prisma, user }) => {
+      ensureAuthenticated(user); // Ensure user is authenticated
+
       const rideService = new RideService(prisma);
-      return rideService.getActiveRideForUser(Number(userId));
+      return rideService.getActiveRideForUser(user.userId); // Use the authenticated user's ID
     },
   },
 };

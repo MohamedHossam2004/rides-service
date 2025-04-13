@@ -6,6 +6,22 @@ let producer: Producer;
 let consumer: Consumer;
 let rideService: RideService;
 
+export async function getProducer(): Promise<Producer> {
+  if (producer) return producer;
+  
+  const kafka = new Kafka({
+    clientId: 'rides-service',
+    brokers: process.env.KAFKA_BROKERS
+      ? process.env.KAFKA_BROKERS.split(',')
+      : ['kafka:9092'],
+  });
+  
+  producer = kafka.producer();
+  await producer.connect();
+  
+  return producer;
+}
+
 // Add this function to get the producer
 export function getKafkaProducer(): Producer | null {
   return producer || null;
