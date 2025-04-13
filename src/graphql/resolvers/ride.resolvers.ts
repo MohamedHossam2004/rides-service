@@ -9,13 +9,14 @@ export const rideResolvers = {
 
     addPassenger: async (
       _,
-      { rideId, passengerId },
+      { rideId, passengerId, email },
       { prisma, producer },
     ) => {
       const rideService = new RideService(prisma, producer);
       return rideService.addPassenger({
         rideId: Number(rideId),
         passengerId: Number(passengerId),
+        email: email,
       });
     },
 

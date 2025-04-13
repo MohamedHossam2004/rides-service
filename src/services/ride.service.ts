@@ -200,8 +200,9 @@ export class RideService {
   async addPassenger(args: {
     rideId: number;
     passengerId: number;
+    email: string;
   }) {
-    const { rideId, passengerId } = args;
+    const { rideId, passengerId,email } = args;
   
     const ride = await this.prisma.ride.findUnique({
       where: { id: rideId },
@@ -235,9 +236,11 @@ export class RideService {
   
     // Add passenger and decrement available seats in a transaction
     const updatedRide = await this.prisma.$transaction(async (prisma) => {
+      console.log(email);
       await prisma.ridePassenger.create({
         data: {
           ride_id: rideId,
+          passenger_email: email,
           passenger_id: passengerId,
           passenger_name: `User ${passengerId}`, // Default passenger name
         },

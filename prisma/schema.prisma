@@ -101,7 +101,7 @@ model RidePassenger {
   passenger_id   Int
   passenger_name String
   created_at     DateTime @default(now())
-
+  passenger_email String
   @@unique([ride_id, passenger_id])
   @@index([ride_id])
   @@index([passenger_id])

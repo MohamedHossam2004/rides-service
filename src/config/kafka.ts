@@ -158,11 +158,12 @@ export async function initKafka(prisma: PrismaClient) {
             }
           } else if (topic === "payment-succeeded") {
             try {
-              const { bookingId, rideId, userId } = messageValue;
+              const { bookingId, rideId, userId, email } = messageValue;
               
               await rideService.addPassenger({
                 rideId: Number(rideId),
                 passengerId: Number(userId),
+                email:email,
               });
           
               await producer.send({
