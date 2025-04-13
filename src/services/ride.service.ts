@@ -197,84 +197,89 @@ export class RideService {
     }
   }
 
-  async addPassenger(args: {
-    rideId: number;
-    passengerId: number;
-  }) {
-    const { rideId, passengerId } = args;
-  
-    const ride = await this.prisma.ride.findUnique({
-      where: { id: rideId },
-      include: { passengers: true },
-    });
-  
-    if (!ride) {
-      throw new Error("Ride not found");
-    }
-  
-    if (ride.departure_time < new Date()) {
-      throw new Error("Ride has already departed");
-    }
-  
-    if (ride.status !== "PENDING") {
-      throw new Error("Ride is not available");
-    }
-  
-    // Check if there are seats available
-    if (ride.seats_available <= 0) {
-      throw new Error("No seats available");
-    }
-  
-    // Check if passenger is already in the ride
-    const existingPassenger = ride.passengers.find(
-      (p) => p.passenger_id === passengerId,
-    );
-    if (existingPassenger) {
-      throw new Error("Passenger already added to this ride");
-    }
-  
-    // Add passenger and decrement available seats in a transaction
-    const updatedRide = await this.prisma.$transaction(async (prisma) => {
-      await prisma.ridePassenger.create({
-        data: {
-          ride_id: rideId,
-          passenger_id: passengerId,
-          passenger_name: `User ${passengerId}`, // Default passenger name
-        },
-      });
-  
-      return prisma.ride.update({
-        where: { id: rideId },
-        data: { seats_available: { decrement: 1 } },
-        include: {
-          area: true,
-          ride_meeting_points: {
-            include: { meeting_point: true },
-            orderBy: { order_index: "asc" },
-          },
-          passengers: true,
-        },
-      });
-    });
-  
-    // Send Kafka event if producer is available
-    if (this.producer) {
-      await this.producer.send({
-        topic: "passenger-added-to-ride",
-        messages: [
-          {
-            key: String(updatedRide.id),
-            value: JSON.stringify({
-              rideId: updatedRide.id,
-              passengerId: passengerId,
-            }),
-          },
-        ],
-      });
-    }
-  
-    return this.formatRide(updatedRide);
+async addPassenger(args: {
+  rideId: number;
+  passengerId: number;
+  email: string; // Add optional email parameter
+}) {
+  const { rideId, passengerId, email } = args;
+
+  const ride = await this.prisma.ride.findUnique({
+    where: { id: rideId },
+    include: { passengers: true },
+  });
+
+  if (!ride) {
+    throw new Error("Ride not found");
   }
+
+  if (ride.departure_time < new Date()) {
+    throw new Error("Ride has already departed");
+  }
+
+  if (ride.status !== "PENDING") {
+    throw new Error("Ride is not available");
+  }
+
+  // Check if there are seats available
+  if (ride.seats_available <= 0) {
+    throw new Error("No seats available");
+  }
+
+  // Check if passenger is already in the ride
+  const existingPassenger = ride.passengers.find(
+    (p) => p.passenger_id === passengerId,
+  );
+  if (existingPassenger) {
+    throw new Error("Passenger already added to this ride");
+  }
+
+  // Add passenger and decrement available seats in a transaction
+  const updatedRide = await this.prisma.$transaction(async (prisma) => {
+    await prisma.ridePassenger.create({
+      data: {
+        ride_id: rideId,
+        passenger_id: passengerId,
+        passenger_name: `User ${passengerId}`, // Default passenger name
+        passenger_email: email || 'unknown@example.com', // Use provided email or default
+      },
+    });
+
+    return prisma.ride.update({
+      where: { id: rideId },
+      data: { seats_available: { decrement: 1 } },
+      include: {
+        area: true,
+        ride_meeting_points: {
+          include: { meeting_point: true },
+          orderBy: { order_index: "asc" },
+        },
+        passengers: true,
+      },
+    });
+  });
+
+  // Send Kafka event if producer is available
+  if (this.producer) {
+    await this.producer.send({
+      topic: "passenger-added-to-ride",
+      messages: [
+        {
+          key: String(updatedRide.id),
+          value: JSON.stringify({
+            rideId: updatedRide.id,
+            passengerId: passengerId,
+            passengerEmail: email || 'unknown@example.com', 
+          }),
+        },
+      ],
+    });
+  }
+
+  return this.formatRide(updatedRide);
+}
+
+// ... existing code ...
   
   // Remove a passenger from a ride
   async removePassenger(args: {

@@ -15,11 +15,12 @@ export const rideResolvers = {
 
     addPassenger: async (_, { rideId }, { prisma, producer, user }) => {
       ensureAuthenticated(user); // Ensure user is authenticated
-
+    
       const rideService = new RideService(prisma, producer);
       return rideService.addPassenger({
         rideId: Number(rideId),
         passengerId: user.userId, // Use the authenticated user's ID as passengerId
+        email: user.email, // Pass the email from the token
       });
     },
 

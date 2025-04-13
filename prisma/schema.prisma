@@ -100,8 +100,8 @@ model RidePassenger {
   ride           Ride     @relation(fields: [ride_id], references: [id], onDelete: Cascade)
   passenger_id   Int
   passenger_name String
+  passenger_email String
   created_at     DateTime @default(now())
-
   @@unique([ride_id, passenger_id])
   @@index([ride_id])
   @@index([passenger_id])

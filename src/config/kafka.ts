@@ -66,7 +66,7 @@ export async function initKafka(prisma: PrismaClient) {
 
           if (topic === "booking-created") {
             try {
-              const { bookingId, rideId, userId, meetingPointId, price } = messageValue;
+              const { bookingId, rideId, userId, meetingPointId, price, userEmail } = messageValue;
 
               // Perform additional validation if needed
               const ride = await prisma.ride.findUnique({
@@ -105,11 +105,14 @@ export async function initKafka(prisma: PrismaClient) {
                       bookingId,
                       price,
                       rideId,
-                      userId
+                      userId,
+                      email: userEmail || `user${userId}@example.com` // Include the email from booking-created event
                     }),
                   },
                 ],
               });
+              
+              console.log(`Start-payment event sent for booking ${bookingId} with user email: ${userEmail || `user${userId}@example.com`}`);
             } catch (error) {
               console.error("Error validating ride for booking:", error);
 
@@ -174,11 +177,12 @@ export async function initKafka(prisma: PrismaClient) {
             }
           } else if (topic === "payment-succeeded") {
             try {
-              const { bookingId, rideId, userId } = messageValue;
+              const { bookingId, rideId, userId, email } = messageValue;
               
               await rideService.addPassenger({
                 rideId: Number(rideId),
                 passengerId: Number(userId),
+                email: email || `user${userId}@example.com`, // Use email from event or generate a placeholder
               });
           
               await producer.send({
@@ -190,6 +194,7 @@ export async function initKafka(prisma: PrismaClient) {
                       bookingId,
                       rideId,
                       userId,
+                      email,
                     }),
                   },
                 ],
