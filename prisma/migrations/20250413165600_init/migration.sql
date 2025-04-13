@@ -55,11 +55,23 @@ CREATE TABLE "RideReview" (
     "id" SERIAL NOT NULL,
     "ride_id" INTEGER NOT NULL,
     "driver_id" INTEGER NOT NULL,
+    "rider_id" INTEGER NOT NULL,
     "rating" INTEGER NOT NULL,
     "review" TEXT,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "RideReview_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "RidePassenger" (
+    "id" SERIAL NOT NULL,
+    "ride_id" INTEGER NOT NULL,
+    "passenger_id" INTEGER NOT NULL,
+    "passenger_name" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "RidePassenger_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateIndex
@@ -102,19 +114,34 @@ CREATE INDEX "RideReview_ride_id_idx" ON "RideReview"("ride_id");
 CREATE INDEX "RideReview_driver_id_idx" ON "RideReview"("driver_id");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "RideReview_ride_id_driver_id_key" ON "RideReview"("ride_id", "driver_id");
+CREATE INDEX "RideReview_rider_id_idx" ON "RideReview"("rider_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RideReview_ride_id_rider_id_key" ON "RideReview"("ride_id", "rider_id");
+
+-- CreateIndex
+CREATE INDEX "RidePassenger_ride_id_idx" ON "RidePassenger"("ride_id");
+
+-- CreateIndex
+CREATE INDEX "RidePassenger_passenger_id_idx" ON "RidePassenger"("passenger_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "RidePassenger_ride_id_passenger_id_key" ON "RidePassenger"("ride_id", "passenger_id");
 
 -- AddForeignKey
-ALTER TABLE "MeetingPoint" ADD CONSTRAINT "MeetingPoint_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "Area"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "MeetingPoint" ADD CONSTRAINT "MeetingPoint_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "Area"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "Ride" ADD CONSTRAINT "Ride_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "Area"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "Ride" ADD CONSTRAINT "Ride_area_id_fkey" FOREIGN KEY ("area_id") REFERENCES "Area"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "RideMeetingPoint" ADD CONSTRAINT "RideMeetingPoint_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "Ride"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RideMeetingPoint" ADD CONSTRAINT "RideMeetingPoint_meeting_point_id_fkey" FOREIGN KEY ("meeting_point_id") REFERENCES "MeetingPoint"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RideMeetingPoint" ADD CONSTRAINT "RideMeetingPoint_meeting_point_id_fkey" FOREIGN KEY ("meeting_point_id") REFERENCES "MeetingPoint"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "RideReview" ADD CONSTRAINT "RideReview_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "Ride"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "RideReview" ADD CONSTRAINT "RideReview_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "Ride"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "RidePassenger" ADD CONSTRAINT "RidePassenger_ride_id_fkey" FOREIGN KEY ("ride_id") REFERENCES "Ride"("id") ON DELETE CASCADE ON UPDATE CASCADE;

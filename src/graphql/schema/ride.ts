@@ -25,7 +25,6 @@ export const rideTypeDefs = gql`
     departureTime: String!
     seatsAvailable: Int!
     createdAt: String!
-    updatedAt: String!
     meetingPoints: [RideMeetingPoint!]!
     reviews: [RideReview!]!
     passengers: [RidePassenger!]!
@@ -53,22 +52,21 @@ export const rideTypeDefs = gql`
       limit: Int
       offset: Int
     ): PaginatedRides!
-    viewActiveRide(userId: Int!): Ride
+    viewActiveRide: Ride
   }
 
   extend type Mutation {
     createRide(
       areaId: Int!
       departureTime: String!
-      driverId: Int!
       girlsOnly: Boolean!
       toGIU: Boolean!
       pricing: [PricingInput!]!
     ): Ride!
 
-    addPassenger(rideId: Int!, passengerId: Int!): Ride!
+    addPassenger(rideId: Int!): Ride! 
 
-    removePassenger(rideId: Int!, passengerId: Int!): Ride!
+    removePassenger(rideId: Int!): Ride! 
     
     updateRideStatus(rideId: Int!, status: RideStatus!): Ride!
   }
