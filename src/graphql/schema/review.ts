@@ -26,7 +26,6 @@ export const reviewTypeDefs = gql`
   extend type Mutation {
     createRideReview(
       rideId: ID!
-      riderId: ID!
       rating: Int!
       review: String
     ): RideReview!

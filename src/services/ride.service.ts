@@ -24,7 +24,7 @@ export class RideService {
       seatsAvailable: ride.seats_available,
       departureTime: ride.departure_time.toISOString(),
       createdAt: ride.created_at.toISOString(),
-      updatedAt: ride.updated_at.toISOString(),
+      // updatedAt field removed
       meetingPoints:
         ride.ride_meeting_points?.map((rp: any) => ({
           id: rp.id,

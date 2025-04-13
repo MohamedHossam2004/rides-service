@@ -6,7 +6,7 @@ export class ReviewService {
   // Helper method to properly format a ride object
   private formatRide(ride: any) {
     if (!ride) return null;
-
+  
     return {
       id: ride.id,
       area_id: ride.area_id,
@@ -28,10 +28,7 @@ export class ReviewService {
       createdAt: ride.created_at
         ? ride.created_at.toISOString()
         : new Date().toISOString(),
-      updated_at: ride.updated_at,
-      updatedAt: ride.updated_at
-        ? ride.updated_at.toISOString()
-        : new Date().toISOString(),
+      // updated_at and updatedAt fields removed
       ride_meeting_points: ride.ride_meeting_points,
       meetingPoints: ride.ride_meeting_points,
     };

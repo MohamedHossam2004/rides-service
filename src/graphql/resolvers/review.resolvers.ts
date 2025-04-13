@@ -1,5 +1,6 @@
 import { ReviewService } from "../../services/review.service";
 import { RideService } from "../../services/ride.service";
+import { ensureAuthenticated } from "../../middleware/auth.middleware";
 
 export const reviewResolvers = {
   Query: {
@@ -13,9 +14,10 @@ export const reviewResolvers = {
       return reviewService.getDriverReviews(driverId);
     },
 
-    getRiderReviews: async (_, { riderId }, { prisma }) => {
+    getRiderReviews: async (_, { riderId }, { prisma, user }) => {
+      ensureAuthenticated(user); // Ensure user is authenticated
       const reviewService = new ReviewService(prisma);
-      return reviewService.getRiderReviews(riderId);
+      return reviewService.getRiderReviews(riderId || user.userId); // Use authenticated user's ID if riderId is not provided
     },
 
     getDriverAverageRating: async (_, { driverId }, { prisma }) => {
@@ -26,7 +28,7 @@ export const reviewResolvers = {
       try {
         const rideService = new RideService(prisma);
         const result = await rideService.searchRides(args);
-        return result ?? []; // fallback
+        return result ?? [];
       } catch (error) {
         console.error("searchRides resolver error:", error);
         return [];
@@ -40,19 +42,22 @@ export const reviewResolvers = {
   },
 
   Mutation: {
-    createRideReview: async (_, args, { prisma }) => {
+    createRideReview: async (_, args, { prisma, user }) => {
+      ensureAuthenticated(user);
       const reviewService = new ReviewService(prisma);
-      return reviewService.createRideReview(args);
+      return reviewService.createRideReview({ ...args, riderId: user.userId }); 
     },
 
-    updateRideReview: async (_, { id, riderId, ...data }, { prisma }) => {
+    updateRideReview: async (_, { id, ...data }, { prisma, user }) => {
+      ensureAuthenticated(user); 
       const reviewService = new ReviewService(prisma);
-      return reviewService.updateRideReview(id, riderId, data);
+      return reviewService.updateRideReview(id, user.userId, data);
     },
 
-    deleteRideReview: async (_, { id, riderId }, { prisma }) => {
+    deleteRideReview: async (_, { id }, { prisma, user }) => {
+      ensureAuthenticated(user);
       const reviewService = new ReviewService(prisma);
-      return reviewService.deleteRideReview(id, riderId);
+      return reviewService.deleteRideReview(id, user.userId);
     },
   },
 };
