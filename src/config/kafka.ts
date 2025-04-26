@@ -35,9 +35,13 @@ export async function initKafka(prisma: PrismaClient) {
 
     // Subscribe to topics
     await consumer.subscribe({ topic: "booking-created", fromBeginning: false });
+    console.log("Subscribed to topic: booking-created");
     await consumer.subscribe({ topic: "booking-canceled", fromBeginning: false });
+    console.log("Subscribed to topic: booking-canceled");
     await consumer.subscribe({ topic: "ride-status-update", fromBeginning: false });
+    console.log("Subscribed to topic: ride-status-update");
     await consumer.subscribe({ topic: "payment-succeeded", fromBeginning: false });
+    console.log("Subscribed to topic: payment-succeeded");
 
 
     // Set up message handler
@@ -50,7 +54,7 @@ export async function initKafka(prisma: PrismaClient) {
 
           if (topic === "booking-created") {
             try {
-              const { bookingId, rideId, userId, meetingPointId, price } = messageValue;
+              const { bookingId, rideId, userId, userEmail, price } = messageValue;
 
               // Perform additional validation if needed
               const ride = await prisma.ride.findUnique({
@@ -89,7 +93,8 @@ export async function initKafka(prisma: PrismaClient) {
                       bookingId,
                       price,
                       rideId,
-                      userId
+                      userId,
+                      userEmail,
                     }),
                   },
                 ],
@@ -175,6 +180,7 @@ export async function initKafka(prisma: PrismaClient) {
                       bookingId,
                       rideId,
                       userId,
+                      email,
                     }),
                   },
                 ],
