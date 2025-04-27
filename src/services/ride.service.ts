@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { Producer } from "kafkajs";
+import { scheduleRideReminder } from "../config/queue";
 
 export class RideService {
   private producer: Producer | null;
@@ -159,6 +160,14 @@ export class RideService {
             },
           ],
         });
+      }
+      
+      // Schedule a reminder notification 15 minutes before departure
+      try {
+        await scheduleRideReminder(rideWithRelations.id, rideWithRelations.departure_time);
+      } catch (error) {
+        console.error(`Failed to schedule reminder for ride ${rideWithRelations.id}:`, error);
+        // Don't throw error here, as the ride creation was successful
       }
 
       const rideData = {
@@ -416,7 +425,6 @@ export class RideService {
     }
   }
 
-  // not tested need userid
   async getActiveRideForUser(userId: number) {
     try {
       const ride = await this.prisma.ride.findFirst({
@@ -637,9 +645,9 @@ export class RideService {
             console.log(`Cancellation notifications sent to ${passengerEmails.length} passengers`);
           }
         } else {
-          // For other status updates, use the general notification endpoint
+          // For other status updates, use the dedicated ride update notification endpoint
           const notificationResponse = await fetch(
-            `${notificationServiceUrl}/notifications/notify`,
+            `${notificationServiceUrl}/notifications/notifyRideUpdate`,
             {
               method: 'POST',
               headers: {
@@ -655,6 +663,7 @@ export class RideService {
                   fromPlace: updatedRide.area.name,
                   toPlace: updatedRide.to_giu ? "GIU" : "Home",
                   date: updatedRide.departure_time.toLocaleString(),
+                  details: `Your ride status has been updated to ${status}. Please check your ride details.`
                 },
               }),
             }

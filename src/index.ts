@@ -2,6 +2,7 @@ import { startStandaloneServer } from "@apollo/server/standalone";
 import { setupApolloServer } from "./config/apollo";
 import { getPrismaClient } from "./config/prisma";
 import { initKafka, disconnectKafka, getKafkaProducer } from "./config/kafka";
+import { checkDelayedJobs, initQueues } from "./config/queue";
 
 async function startServer() {
   // Initialize Prisma client
@@ -9,6 +10,19 @@ async function startServer() {
   
   // Initialize Kafka
   await initKafka(prisma);
+  
+  // Initialize Bull queues
+  await initQueues(prisma);
+  
+  // Set up periodic check for delayed jobs (every 5 minutes)
+  setInterval(async () => {
+    try {
+      console.log('Running scheduled check for delayed jobs');
+      await checkDelayedJobs();
+    } catch (error) {
+      console.error('Error during scheduled check for delayed jobs:', error);
+    }
+  }, 5 * 60 * 1000);
   
   // Get the Kafka producer
   const producer = getKafkaProducer();
