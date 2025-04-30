@@ -91,9 +91,8 @@ export class AreaService {
       console.error("Error creating area:", error);
       if (error instanceof Error) {
         throw new Error(error.message);
-      } else {
-        throw new Error("An unknown error occurred");
       }
+        throw new Error("An unknown error occurred");
     }
   }
 
@@ -146,10 +145,9 @@ export class AreaService {
       if (error instanceof Error) {
         console.error("Error updating area:", error.message);
         throw new Error(error.message || "Failed to update area");
-      } else {
+      }
         console.error("Error updating area:", error);
         throw new Error("Failed to update area");
-      }
     }
   }
 
@@ -161,7 +159,7 @@ export class AreaService {
         throw new Error("Invalid area ID");
       }
       const areaId = Number(id);
-      if (isNaN(areaId)) {
+      if (Number.isNaN(areaId)) {
         throw new Error("Area ID must be a numeric string");
       }
 
