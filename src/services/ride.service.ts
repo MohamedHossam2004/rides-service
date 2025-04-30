@@ -430,9 +430,7 @@ export class RideService {
       const ride = await this.prisma.ride.findFirst({
         where: {
           driver_id: userId,
-          status: {
-            in: ['PENDING', 'IN_PROGRESS'],
-          },
+          status: 'IN_PROGRESS',
           departure_time: {
             gte: new Date(),
           },
@@ -483,6 +481,66 @@ export class RideService {
       };
     } catch (err) {
       console.error("🚨 getActiveRideForUser error:", err);
+      return null;
+    }
+  }
+
+  async getUpcomingRideForUser(userId: number) {
+    try {
+      const ride = await this.prisma.ride.findFirst({
+        where: {
+          driver_id: userId,
+          status: 'PENDING',
+          departure_time: {
+            gte: new Date(),
+          },
+        },
+        orderBy: {
+          departure_time: 'asc',
+        },
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: 'asc' },
+          },
+          reviews: true, // Include reviews in the query
+        },
+      });
+  
+      if (!ride || !ride.departure_time) return null;
+  
+      return {
+        id: ride.id,
+        status: ride.status ?? "PENDING",
+        driverId: ride.driver_id,
+        girlsOnly: ride.girls_only,
+        toGIU: ride.to_giu,
+        departureTime: ride.departure_time.toISOString(),
+        createdAt: ride.created_at.toISOString(),
+        updatedAt: ride.updated_at.toISOString(),
+        seatsAvailable: ride.seats_available,
+        area: {
+          name: ride.area?.name ?? "Unknown Area",
+        },
+        meetingPoints: ride.ride_meeting_points.map((rp) => ({
+          price: rp.price,
+          orderIndex: rp.order_index,
+          meetingPoint: {
+            name: rp.meeting_point.name,
+            latitude: rp.meeting_point.latitude,
+            longitude: rp.meeting_point.longitude,
+          },
+        })),
+        reviews: ride.reviews.map((review) => ({
+          id: review.id,
+          rating: review.rating,
+          review: review.review,
+          createdAt: review.created_at.toISOString(),
+        })),
+      };
+    } catch (err) {
+      console.error("🚨 getUpcomingRideForUser error:", err);
       return null;
     }
   }

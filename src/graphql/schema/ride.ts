@@ -54,6 +54,7 @@ export const rideTypeDefs = gql`
       offset: Int
     ): PaginatedRides!
     viewActiveRide(userId: Int!): Ride
+    viewUpcomingRide(userId: Int!): Ride
   }
 
   extend type Mutation {

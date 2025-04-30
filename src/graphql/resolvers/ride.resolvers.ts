@@ -68,5 +68,10 @@ export const rideResolvers = {
       const rideService = new RideService(prisma);
       return rideService.getActiveRideForUser(Number(userId));
     },
+
+    viewUpcomingRide: async (_, { userId }, { prisma }) => {
+      const rideService = new RideService(prisma);
+      return rideService.getUpcomingRideForUser(Number(userId));
+    },
   },
 };
