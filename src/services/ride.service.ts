@@ -382,7 +382,8 @@ export class RideService {
             include: { meeting_point: true },
             orderBy: { order_index: 'asc' },
           },
-          reviews: true, // Include reviews in the query
+          reviews: true,
+          passengers: true,
         },
       });
   
@@ -390,35 +391,7 @@ export class RideService {
   
       return rides
         .filter((ride) => ride.area && ride.ride_meeting_points.every((rp) => rp.meeting_point))
-        .map((ride) => ({
-          id: ride.id,
-          driverId: ride.driver_id,
-          girlsOnly: ride.girls_only,
-          toGIU: ride.to_giu,
-          status: ride.status ?? "PENDING",
-          departureTime: ride.departure_time.toISOString(),
-          createdAt: ride.created_at.toISOString(),
-          updatedAt: ride.updated_at.toISOString(),
-          seatsAvailable: ride.seats_available,
-          meetingPoints: ride.ride_meeting_points.map((rp) => ({
-            price: rp.price,
-            orderIndex: rp.order_index,
-            meetingPoint: {
-              name: rp.meeting_point.name,
-              latitude: rp.meeting_point.latitude,
-              longitude: rp.meeting_point.longitude,
-            },
-          })),
-          area: {
-            name: ride.area.name,
-          },
-          reviews: ride.reviews.map((review) => ({
-            id: review.id,
-            rating: review.rating,
-            review: review.review,
-            createdAt: review.created_at.toISOString(),
-          })),
-        }));
+        .map((ride) => this.formatRide(ride));
     } catch (error) {
       console.error("searchRides service error:", error);
       return [];
