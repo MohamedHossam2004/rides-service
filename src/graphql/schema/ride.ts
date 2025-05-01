@@ -53,23 +53,26 @@ export const rideTypeDefs = gql`
       limit: Int
       offset: Int
     ): PaginatedRides!
-    viewActiveRide(userId: Int!): Ride
-    viewUpcomingRide(userId: Int!): Ride
+    viewActiveRide: Ride
+    viewUpcomingRide: Ride
+    getDriverRides: [Ride!]!
+    getActiveDriverRides: [Ride!]!
+    getUserRideByStatus(status: RideStatus): [Ride!]!
+    getDriverRideByStatus(status: RideStatus): [Ride!]!
   }
 
   extend type Mutation {
     createRide(
       areaId: Int!
       departureTime: String!
-      driverId: Int!
       girlsOnly: Boolean!
       toGIU: Boolean!
       pricing: [PricingInput!]!
     ): Ride!
 
-    addPassenger(rideId: Int!, passengerId: Int!, email: String!): Ride!
+    addPassenger(rideId: Int!, email: String!): Ride!
 
-    removePassenger(rideId: Int!, passengerId: Int!): Ride!
+    removePassenger(rideId: Int!): Ride!
     
     updateRideStatus(rideId: Int!, status: RideStatus!): Ride!
   }

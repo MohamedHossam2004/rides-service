@@ -84,7 +84,7 @@ export class RideService {
       }
 
       const currentTime = new Date();
-      const cairoTimeOffset = 2 * 60 * 60 * 1000;
+      const cairoTimeOffset = 3 * 60 * 60 * 1000;
       const cairoCurrentTime = new Date(
         currentTime.getTime() + cairoTimeOffset,
       );
@@ -425,18 +425,13 @@ export class RideService {
     }
   }
 
-  async getActiveRideForUser(userId: number) {
+  async getDriverRideByStatus(driverId: number, status?: string) {
     try {
-      const ride = await this.prisma.ride.findFirst({
-        where: {
-          driver_id: userId,
-          status: 'IN_PROGRESS',
-          departure_time: {
-            gte: new Date(),
-          },
-        },
-        orderBy: {
-          departure_time: 'asc',
+      // Fetch rides for the driver filtered by status
+      const rides = await this.prisma.ride.findMany({
+        where: { 
+          driver_id: driverId,
+          ...(status && { status: status as any })
         },
         include: {
           area: true,
@@ -444,56 +439,78 @@ export class RideService {
             include: { meeting_point: true },
             orderBy: { order_index: 'asc' },
           },
-          reviews: true, // Include reviews in the query
+          passengers: true,
+          reviews: true,
         },
+        orderBy: { departure_time: 'asc' },
       });
-  
-      if (!ride || !ride.departure_time) return null;
-  
-      return {
+
+      if (!rides || rides.length === 0) return [];
+
+      // Format rides with proper data
+      return rides.map(ride => ({
         id: ride.id,
-        status: ride.status ?? "PENDING",
+        area: {
+          id: ride.area.id,
+          name: ride.area.name,
+          isActive: ride.area.is_active,
+        },
+        toGIU: ride.to_giu,
+        status: ride.status,
         driverId: ride.driver_id,
         girlsOnly: ride.girls_only,
-        toGIU: ride.to_giu,
+        seatsAvailable: ride.seats_available,
         departureTime: ride.departure_time.toISOString(),
         createdAt: ride.created_at.toISOString(),
         updatedAt: ride.updated_at.toISOString(),
-        seatsAvailable: ride.seats_available,
-        area: {
-          name: ride.area?.name ?? "Unknown Area",
-        },
         meetingPoints: ride.ride_meeting_points.map((rp) => ({
+          id: rp.id,
           price: rp.price,
           orderIndex: rp.order_index,
-          meetingPoint: {
+          meetingPoint: rp.meeting_point ? {
+            id: rp.meeting_point.id,
             name: rp.meeting_point.name,
-            latitude: rp.meeting_point.latitude,
             longitude: rp.meeting_point.longitude,
-          },
+            latitude: rp.meeting_point.latitude,
+            isActive: rp.meeting_point.is_active,
+          } : null,
         })),
-        reviews: ride.reviews.map((review) => ({
-          id: review.id,
-          rating: review.rating,
-          review: review.review,
-          createdAt: review.created_at.toISOString(),
+        passengers: ride.passengers.map((p) => ({
+          id: p.id,
+          passengerId: p.passenger_id,
+          passengerName: p.passenger_name,
+          createdAt: p.created_at.toISOString(),
         })),
-      };
-    } catch (err) {
-      console.error("🚨 getActiveRideForUser error:", err);
-      return null;
+        reviews: ride.reviews.map((r) => ({
+          id: r.id,
+          rating: r.rating,
+          review: r.review,
+          createdAt: r.created_at.toISOString(),
+        })),
+      }));
+    } catch (error) {
+      console.error("Error fetching driver rides:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error("An unknown error occurred while fetching driver rides");
     }
   }
 
-  async getUpcomingRideForUser(userId: number) {
+  async getUserRideByStatus(userId: number, status?: string) {
     try {
-      const ride = await this.prisma.ride.findFirst({
+      // Find rides where the user is a passenger filtered by status
+      const rides = await this.prisma.ride.findMany({
         where: {
-          driver_id: userId,
-          status: 'PENDING',
+          ...(status && { status: status as any }),
           departure_time: {
             gte: new Date(),
           },
+          passengers: {
+            some: {
+              passenger_id: userId
+            }
+          }
         },
         orderBy: {
           departure_time: 'asc',
@@ -504,13 +521,14 @@ export class RideService {
             include: { meeting_point: true },
             orderBy: { order_index: 'asc' },
           },
-          reviews: true, // Include reviews in the query
+          passengers: true,
+          reviews: true,
         },
       });
   
-      if (!ride || !ride.departure_time) return null;
+      if (!rides || rides.length === 0) return [];
   
-      return {
+      return rides.map(ride => ({
         id: ride.id,
         status: ride.status ?? "PENDING",
         driverId: ride.driver_id,
@@ -521,16 +539,27 @@ export class RideService {
         updatedAt: ride.updated_at.toISOString(),
         seatsAvailable: ride.seats_available,
         area: {
+          id: ride.area?.id,
           name: ride.area?.name ?? "Unknown Area",
+          isActive: ride.area?.is_active ?? true,
         },
         meetingPoints: ride.ride_meeting_points.map((rp) => ({
+          id: rp.id,
           price: rp.price,
           orderIndex: rp.order_index,
           meetingPoint: {
+            id: rp.meeting_point.id,
             name: rp.meeting_point.name,
             latitude: rp.meeting_point.latitude,
             longitude: rp.meeting_point.longitude,
+            isActive: rp.meeting_point.is_active,
           },
+        })),
+        passengers: ride.passengers.map((p) => ({
+          id: p.id,
+          passengerId: p.passenger_id,
+          passengerName: p.passenger_name,
+          createdAt: p.created_at.toISOString(),
         })),
         reviews: ride.reviews.map((review) => ({
           id: review.id,
@@ -538,10 +567,10 @@ export class RideService {
           review: review.review,
           createdAt: review.created_at.toISOString(),
         })),
-      };
+      }));
     } catch (err) {
-      console.error("🚨 getUpcomingRideForUser error:", err);
-      return null;
+      console.error("🚨 getUserRideByStatus error:", err);
+      return [];
     }
   }
   
@@ -575,6 +604,8 @@ export class RideService {
       throw new Error(`An unknown error occurred while fetching ride with ID ${id}`);
     }
   }
+
+
 
   async getRides(filters: {
     areaId?: number;

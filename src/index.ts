@@ -3,6 +3,8 @@ import { setupApolloServer } from "./config/apollo";
 import { getPrismaClient } from "./config/prisma";
 import { initKafka, disconnectKafka, getKafkaProducer } from "./config/kafka";
 import { checkDelayedJobs, initQueues } from "./config/queue";
+import { initRideStatusQueue } from "./config/ride-status-queue";
+import { createContext } from "./middleware/context";
 
 async function startServer() {
   // Initialize Prisma client
@@ -13,6 +15,9 @@ async function startServer() {
   
   // Initialize Bull queues
   await initQueues(prisma);
+  
+  // Initialize ride status update queue
+  await initRideStatusQueue(prisma);
   
   // Set up periodic check for delayed jobs (every 5 minutes)
   setInterval(async () => {
@@ -33,7 +38,7 @@ async function startServer() {
   // Start the server using the standalone server
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
-    context: async () => ({ prisma, producer }),
+    context: async ({ req }) => createContext({ req, prisma, producer }),
   });
 
   console.log(`🚀 Server ready at ${url}`);
