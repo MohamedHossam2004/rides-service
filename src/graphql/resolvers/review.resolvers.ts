@@ -33,6 +33,18 @@ export const reviewResolvers = {
       const reviewService = new ReviewService(context.prisma);
       return reviewService.getDriverAverageRating(driverId);
     },
+
+    getAllReviews: async (_, __, context) => {
+      // Ensure user is authenticated and is an admin
+      await context.ensureAuthenticated();
+      
+      if (!context.isAdmin) {
+        throw new AuthenticationError('Only admins can view all reviews');
+      }
+      
+      const reviewService = new ReviewService(context.prisma);
+      return reviewService.getAllReviews();
+    },
   },
 
   Mutation: {

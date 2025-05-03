@@ -338,4 +338,35 @@ export class ReviewService {
       );
     }
   }
+
+  async getAllReviews() {
+    try {
+      const reviews = await this.prisma.rideReview.findMany({
+        orderBy: { created_at: "desc" },
+        include: {
+          ride: {
+            include: {
+              area: true,
+            },
+          },
+        },
+      });
+
+      return reviews.map((review) => ({
+        id: review.id,
+        driverId: review.driver_id,
+        riderId: review.rider_id,
+        rating: review.rating,
+        review: review.review,
+        createdAt: review.created_at.toISOString(),
+        ride: this.formatRide(review.ride),
+      }));
+    } catch (error) {
+      if (error instanceof Error) {
+        console.error(`Error fetching all reviews: ${error.message}`);
+        throw new Error(error.message);
+      }
+      throw new Error("An unknown error occurred while fetching all reviews");
+    }
+  }
 }

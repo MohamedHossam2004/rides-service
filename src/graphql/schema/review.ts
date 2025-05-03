@@ -21,6 +21,7 @@ export const reviewTypeDefs = gql`
     getDriverReviews(driverId: ID!): [RideReview!]!
     getRiderReviews(riderId: ID!): [RideReview!]!
     getDriverAverageRating(driverId: ID!): DriverRating!
+    getAllReviews: [RideReview!]!
   }
 
   extend type Mutation {
