@@ -7,9 +7,7 @@ export const rideResolvers = {
     createRide: async (_, args, context) => {
       await context.ensureAuthenticated();
       await context.ensureDriver();
-      if (args.girlsOnly && !context.isFemale) {
-        throw new AuthenticationError('Only female drivers can create girls-only rides');
-      }
+      await context.ensureFemale();
       const driverId = context.userId;
       if (!driverId) {
         throw new AuthenticationError('User ID not found in token');
