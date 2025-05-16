@@ -169,5 +169,13 @@ export const rideResolvers = {
       const rideService = new RideService(context.prisma);
       return rideService.getDriverRideByStatus(context.userId, status);
     },
+
+    adminGetAllRides: async (_, __, context) => {
+      await context.ensureAuthenticated();
+      await context.ensureAdmin();
+      
+      const rideService = new RideService(context.prisma);
+      return rideService.getAllRidesForAdmin();
+    },
   },
 };

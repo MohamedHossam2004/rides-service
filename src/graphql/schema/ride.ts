@@ -59,6 +59,7 @@ export const rideTypeDefs = gql`
     getActiveDriverRides: [Ride!]!
     getUserRideByStatus(status: RideStatus): [Ride!]!
     getDriverRideByStatus(status: RideStatus): [Ride!]!
+    adminGetAllRides: [Ride!]!
   }
 
   extend type Mutation {

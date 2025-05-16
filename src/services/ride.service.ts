@@ -17,7 +17,11 @@ export class RideService {
   private formatRide(ride: any) {
     return {
       id: ride.id,
-      area: ride.area,
+      area: ride.area ? {
+        id: ride.area.id,
+        name: ride.area.name,
+        isActive: ride.area.is_active === null ? true : ride.area.is_active,
+      } : null,
       toGIU: ride.to_giu,
       status: ride.status,
       driverId: ride.driver_id,
@@ -578,8 +582,6 @@ export class RideService {
     }
   }
 
-
-
   async getRides(filters: {
     areaId?: number;
     driverId?: number;
@@ -633,6 +635,7 @@ export class RideService {
       throw new Error("An unknown error occurred while fetching rides");
     }
   }
+
   async updateRideStatus(args: {
     rideId: number;
     status: string;
@@ -790,5 +793,42 @@ export class RideService {
     }
   
     return this.formatRide(updatedRide);
+  }
+
+  async getAllRidesForAdmin() {
+    try {
+      const rides = await this.prisma.ride.findMany({
+        include: {
+          area: true,
+          ride_meeting_points: {
+            include: { meeting_point: true },
+            orderBy: { order_index: 'asc' },
+          },
+          passengers: true,
+          reviews: true,
+        },
+        orderBy: {
+          created_at: 'desc'
+        }
+      });
+
+      return rides.map(ride => {
+        // Ensure area has isActive field
+        const formattedRide = this.formatRide(ride);
+        
+        // Set a default value for area.isActive if it's null
+        if (formattedRide.area && formattedRide.area.isActive === null) {
+          formattedRide.area.isActive = true;
+        }
+        
+        return formattedRide;
+      });
+    } catch (error) {
+      console.error("Error fetching all rides for admin:", error);
+      if (error instanceof Error) {
+        throw new Error(error.message);
+      }
+      throw new Error("An unknown error occurred while fetching rides");
+    }
   }
 }
