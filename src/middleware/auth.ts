@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 
 // JWT secret should match the one in the user service
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-this-in-production';
+const JWT_SECRET = 'your-super-secret-jwt-key-change-this-in-production';
 
 interface DecodedToken {
   userId: number;

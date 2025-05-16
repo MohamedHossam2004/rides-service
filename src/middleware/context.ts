@@ -38,15 +38,16 @@ export async function createContext({ req, prisma, producer }: { req: any, prism
         throw new AuthenticationError('Authentication required');
       }
       
-      try {
-        const userId = await getUserId(token);
-        console.log('userId:', userId);
-        if (!userId) {
-          throw new AuthenticationError('Invalid token');
-        }
-      } catch (error) {
-        throw new AuthenticationError('Authentication failed');
+      // Call getUserId. It's designed to return null if token verification fails.
+      const userIdFromToken = await getUserId(token);
+      // Log the result from getUserId for debugging.
+      console.log('ensureAuthenticated - userId from getUserId:', userIdFromToken);
+      if (!userIdFromToken) {
+        // Log server-side for more detailed debugging information.
+        console.error('ensureAuthenticated: Token validation failed. getUserId returned null. Possible reasons: JWT_SECRET mismatch, token expired, or malformed token.');
+        throw new AuthenticationError('Invalid token or token could not be verified.');
       }
+      // If this point is reached, the token has yielded a userId.
     },
     
     ensureAdmin: async () => {
