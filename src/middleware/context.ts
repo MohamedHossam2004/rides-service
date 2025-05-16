@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import { Producer } from 'kafkajs';
-import { verifyToken, isAdmin, isDriver, isFemale, getUserId, AuthenticationError } from './auth';
+import { verifyToken, isAdmin, isDriver, isMale, getUserId, AuthenticationError } from './auth';
 
 export interface Context {
   prisma: PrismaClient;
@@ -9,7 +9,7 @@ export interface Context {
   userId: number | null;
   isAdmin: boolean;
   isDriver: boolean;
-  isFemale: boolean;
+  gender: boolean;
   ensureAuthenticated: () => Promise<void>;
   ensureAdmin: () => Promise<void>;
   ensureDriver: () => Promise<void>;
@@ -30,7 +30,7 @@ export async function createContext({ req, prisma, producer }: { req: any, prism
     userId: null,
     isAdmin: false,
     isDriver: false,
-    isFemale: false,
+    gender: false,
     
     // Authentication helper methods
     ensureAuthenticated: async () => {
@@ -65,7 +65,7 @@ export async function createContext({ req, prisma, producer }: { req: any, prism
     
     ensureFemale: async () => {
       await context.ensureAuthenticated();
-      if (!await isFemale(token!)) {
+      if (await isMale(token!)) {
         throw new AuthenticationError('This feature is only available for female users');
       }
     },
@@ -84,7 +84,7 @@ export async function createContext({ req, prisma, producer }: { req: any, prism
       context.userId = await getUserId(token);
       context.isAdmin = await isAdmin(token);
       context.isDriver = await isDriver(token);
-      context.isFemale = await isFemale(token);
+      context.gender = await isMale(token);
     } catch (error) {
       // Token validation failed, but we'll continue with default values
       console.error('Token validation error:', error);

@@ -57,10 +57,10 @@ export async function isDriver(token: string): Promise<boolean> {
 /**
  * Checks if the user is female
  */
-export async function isFemale(token: string): Promise<boolean> {
+export async function isMale(token: string): Promise<boolean> {
   try {
     const decoded = await verifyToken(token);
-    return decoded.gender === false;
+    return decoded.gender === true;
   } catch (error) {
     return false;
   }

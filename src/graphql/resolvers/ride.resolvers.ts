@@ -7,7 +7,7 @@ export const rideResolvers = {
     createRide: async (_, args, context) => {
       await context.ensureAuthenticated();
       await context.ensureDriver();
-      if (args.girlsOnly && !context.isFemale) {
+      if (args.girlsOnly && context.gender) {
         throw new AuthenticationError('Only female drivers can create girls-only rides');
       }
       const driverId = context.userId;
@@ -31,7 +31,7 @@ export const rideResolvers = {
       const ride = await context.prisma.ride.findUnique({
         where: { id: Number(rideId) }
       });
-      if (ride?.girls_only && !context.isFemale) {
+      if (ride?.girls_only && context.gender) {
         throw new AuthenticationError('This ride is for female passengers only');
       }
       return rideService.addPassenger({
@@ -113,7 +113,7 @@ export const rideResolvers = {
     searchRides: async (_, args, context) => {
       try {
         // If searching for girls-only rides, ensure the user is female
-        if (args.girlsOnly && !context.isFemale) {
+        if (args.girlsOnly && context.gender) {
           await context.ensureAuthenticated();
           await context.ensureFemale();
         }
