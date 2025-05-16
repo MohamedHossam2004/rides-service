@@ -12,7 +12,7 @@ interface DecodedToken {
   email: string;
   isAdmin: boolean;
   isDriver: boolean;
-  gender: string;
+  gender: boolean;
   iat: number;
   exp: number;
 }
@@ -60,7 +60,7 @@ export async function isDriver(token: string): Promise<boolean> {
 export async function isFemale(token: string): Promise<boolean> {
   try {
     const decoded = await verifyToken(token);
-    return decoded.gender === 'FEMALE';
+    return decoded.gender === false;
   } catch (error) {
     return false;
   }
