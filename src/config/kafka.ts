@@ -1,4 +1,4 @@
-import { Kafka, Producer, Consumer } from "kafkajs";
+import { Kafka, Producer, Consumer, SASLOptions } from "kafkajs";
 import { PrismaClient } from "@prisma/client";
 import { RideService } from "../services/ride.service";
 
@@ -12,11 +12,22 @@ export function getKafkaProducer(): Producer | null {
 }
 
 export async function initKafka(prisma: PrismaClient) {
+  // Configure Kafka with Confluent Cloud authentication
+  const sasl: SASLOptions | undefined = process.env.KAFKA_USERNAME && process.env.KAFKA_PASSWORD
+    ? {
+        mechanism: 'plain',
+        username: process.env.KAFKA_USERNAME,
+        password: process.env.KAFKA_PASSWORD
+      }
+    : undefined;
+
   const kafka = new Kafka({
     clientId: "rides-service",
     brokers: process.env.KAFKA_BROKERS
       ? process.env.KAFKA_BROKERS.split(",")
       : ["localhost:9092"],
+    ssl: true,
+    sasl
   });
 
   producer = kafka.producer();
